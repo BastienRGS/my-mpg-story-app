@@ -1,0 +1,12 @@
+---
+description: Data and Supabase rules
+globs: ["lib/**/*"]
+alwaysApply: false
+---
+
+Data rules:
+- All database access goes through lib/data or lib/supabase
+- Return typed data
+- Handle empty states cleanly
+- Keep mock and Supabase implementations easy to switch
+- Do not mix mock fixtures into UI files unless explicitly temporary

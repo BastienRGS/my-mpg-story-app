@@ -1,0 +1,13 @@
+---
+description: Frontend rules
+globs: ["app/**/*", "components/**/*"]
+alwaysApply: false
+---
+
+Frontend rules:
+- Use reusable sections and cards
+- Keep page composition readable
+- Prefer shadcn/ui patterns when relevant
+- Use Recharts for data visualizations
+- French labels only in the UI
+- Narrative content should feel like sports media, not generic SaaS copy
