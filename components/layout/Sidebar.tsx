@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
@@ -39,11 +40,19 @@ const navItems = [
 
 interface SidebarProps {
   className?: string
+  /** Slug de la ligue courante (routes sous /ligue/[slug]/…). */
+  leagueSlug: string
 }
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ className, leagueSlug }: SidebarProps) {
+  const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [activeItem, setActiveItem] = useState("dashboard")
+
+  const historiqueHref = `/ligue/${encodeURIComponent(leagueSlug)}/historique`
+  const historiquePathDecoded = `/ligue/${leagueSlug}/historique`
+  const isHistoriqueActive =
+    pathname === historiquePathDecoded || pathname === historiqueHref
 
   return (
     <aside
@@ -74,11 +83,31 @@ export function Sidebar({ className }: SidebarProps) {
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = iconMap[item.icon] || LayoutDashboard
-          const isActive = activeItem === item.id
+          const isActive =
+            item.id === "historique" ? isHistoriqueActive : activeItem === item.id
+
+          if (item.id === "historique") {
+            return (
+              <Link
+                key={item.id}
+                href={historiqueHref}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-primary"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                )}
+              >
+                <Icon className="w-5 h-5 shrink-0" aria-hidden />
+                {!collapsed && <span>{item.label}</span>}
+              </Link>
+            )
+          }
 
           return (
             <button
               key={item.id}
+              type="button"
               onClick={() => setActiveItem(item.id)}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",

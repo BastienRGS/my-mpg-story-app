@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Play, Star, ThumbsDown, ArrowRight, Quote } from "lucide-react"
@@ -6,6 +7,7 @@ import { cn } from "@/lib/utils"
 
 interface EpisodeOfWeekProps {
   leagueName: string
+  leagueSlug: string
   /** One-line editorial hook (e.g. from standings snapshot). */
   editorialTeaser?: string | null
   currentMatchday?: Matchday | null
@@ -15,7 +17,7 @@ const MOCK_HEADLINE = "La semaine où les certitudes ont volé en éclats"
 const MOCK_DECK =
   "Penalty litigieux, remontada improbable et groupe WhatsApp en feu : retour sur une journée qui restera dans les annales du canapé."
 
-export function EpisodeOfWeek({ leagueName, editorialTeaser, currentMatchday }: EpisodeOfWeekProps) {
+export function EpisodeOfWeek({ leagueName, leagueSlug, editorialTeaser, currentMatchday }: EpisodeOfWeekProps) {
   if (!currentMatchday) {
     return (
       <section className="space-y-3 sm:space-y-4">
@@ -118,9 +120,13 @@ export function EpisodeOfWeek({ leagueName, editorialTeaser, currentMatchday }: 
                 assassins sur le groupe, et ce petit joueur qui a tout changé en un week-end.
               </p>
 
-              <Button className="w-full gap-2 sm:w-auto">
-                Lire l&apos;analyse complète
-                <ArrowRight className="h-4 w-4" />
+              <Button asChild className="w-full gap-2 sm:w-auto">
+                <Link
+                  href={`/ligue/${encodeURIComponent(leagueSlug)}/j/${currentMatchday.number}`}
+                >
+                  Lire l&apos;analyse complète
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
             </div>
 

@@ -3,10 +3,11 @@
 import { useActionState, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useFormStatus } from "react-dom"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { submitMatchResult, type MatchEntryActionState } from "./actions"
+import { submitBulkMatchResults, type MatchEntryActionState } from "./actions"
 
 export type LeagueOption = {
   slug: string
@@ -14,13 +15,16 @@ export type LeagueOption = {
   teams: { id: string; label: string }[]
 }
 
+const DEFAULT_ROWS = 6
+const MAX_ROWS = 40
+
 const initialState: MatchEntryActionState = { ok: false, message: "" }
 
 function SubmitButton() {
   const { pending } = useFormStatus()
   return (
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending ? "Enregistrement…" : "Enregistrer le match"}
+      {pending ? "Enregistrement…" : "Enregistrer tous les matchs"}
     </Button>
   )
 }
@@ -31,24 +35,24 @@ interface MatchEntryFormProps {
 }
 
 export function MatchEntryForm({ leagueOptions, defaultLeagueSlug }: MatchEntryFormProps) {
-  const [state, formAction] = useActionState(submitMatchResult, initialState)
+  const [state, formAction] = useActionState(submitBulkMatchResults, initialState)
   const [leagueSlug, setLeagueSlug] = useState(defaultLeagueSlug)
+  const [numRows, setNumRows] = useState(DEFAULT_ROWS)
 
   const teams = useMemo(() => {
     return leagueOptions.find((l) => l.slug === leagueSlug)?.teams ?? []
   }, [leagueOptions, leagueSlug])
 
-  const [homeId, setHomeId] = useState("")
-  const [awayId, setAwayId] = useState("")
-
   useEffect(() => {
-    setHomeId("")
-    setAwayId("")
+    setNumRows(DEFAULT_ROWS)
   }, [leagueSlug])
 
+  const rowIndices = useMemo(() => Array.from({ length: numRows }, (_, i) => i), [numRows])
+
   return (
-    <form action={formAction} className="space-y-5 rounded-xl border border-border bg-card p-4 sm:p-6">
+    <form action={formAction} className="space-y-6 rounded-xl border border-border bg-card p-4 sm:p-6">
       <input type="hidden" name="leagueSlug" value={leagueSlug} />
+      <input type="hidden" name="row_count" value={numRows} />
 
       <div className="space-y-2">
         <Label htmlFor="adminSecret">Secret admin</Label>
@@ -95,55 +99,121 @@ export function MatchEntryForm({ leagueOptions, defaultLeagueSlug }: MatchEntryF
           required
           className="max-w-[8rem]"
         />
+        <p className="text-xs text-muted-foreground">
+          Si la journée n’existe pas encore dans Supabase pour cette saison, elle sera créée
+          automatiquement à l’enregistrement.
+        </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="home_team_id">Équipe domicile</Label>
-          <select
-            id="home_team_id"
-            name="home_team_id"
-            value={homeId}
-            onChange={(e) => setHomeId(e.target.value)}
-            required
-            className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      <div className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Matchs de la journée</h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            disabled={numRows >= MAX_ROWS}
+            onClick={() => setNumRows((n) => Math.min(MAX_ROWS, n + 1))}
           >
-            <option value="">— Choisir —</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+            Ajouter une ligne
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="away_team_id">Équipe extérieur</Label>
-          <select
-            id="away_team_id"
-            name="away_team_id"
-            value={awayId}
-            onChange={(e) => setAwayId(e.target.value)}
-            required
-            className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          >
-            <option value="">— Choisir —</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="home_score">Buts domicile</Label>
-          <Input id="home_score" name="home_score" type="number" min={0} required className="max-w-[8rem]" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="away_score">Buts extérieur</Label>
-          <Input id="away_score" name="away_score" type="number" min={0} required className="max-w-[8rem]" />
+        <p className="text-xs text-muted-foreground">
+          Les lignes sans score (champs vides) sont ignorées. Un match déjà présent pour cette journée et
+          la même paire d’équipes est mis à jour.
+        </p>
+
+        <div
+          key={leagueSlug}
+          className="space-y-4 rounded-lg border border-border/80 bg-muted/20 p-3 sm:p-4"
+          role="group"
+          aria-label="Grille des matchs"
+        >
+          {/* En-tête desktop */}
+          <div className="mb-1 hidden gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[1fr_4.5rem_4.5rem_1fr] sm:items-end sm:gap-3">
+            <span>Équipe A</span>
+            <span className="text-center">Buts A</span>
+            <span className="text-center">Buts B</span>
+            <span>Équipe B</span>
+          </div>
+
+          {rowIndices.map((i) => (
+            <div
+              key={i}
+              className="grid gap-3 rounded-md border border-border/60 bg-card/80 p-3 sm:grid-cols-[1fr_4.5rem_4.5rem_1fr] sm:items-center sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0"
+              aria-label={`Match ligne ${i + 1}`}
+            >
+              <div className="space-y-1 sm:space-y-0">
+                <Label htmlFor={`home_team_id_${i}`} className="sm:sr-only">
+                  Équipe A (ligne {i + 1})
+                </Label>
+                <select
+                  id={`home_team_id_${i}`}
+                  name={`home_team_id_${i}`}
+                  defaultValue=""
+                  className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  <option value="">— Équipe A —</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:contents">
+                <div className="space-y-1 sm:space-y-0">
+                  <Label htmlFor={`home_score_${i}`} className="sm:sr-only">
+                    Buts A
+                  </Label>
+                  <Input
+                    id={`home_score_${i}`}
+                    name={`home_score_${i}`}
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    className="h-9 w-full sm:max-w-[4.5rem]"
+                    placeholder="—"
+                  />
+                </div>
+                <div className="space-y-1 sm:space-y-0">
+                  <Label htmlFor={`away_score_${i}`} className="sm:sr-only">
+                    Buts B
+                  </Label>
+                  <Input
+                    id={`away_score_${i}`}
+                    name={`away_score_${i}`}
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    className="h-9 w-full sm:max-w-[4.5rem]"
+                    placeholder="—"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1 sm:space-y-0">
+                <Label htmlFor={`away_team_id_${i}`} className="sm:sr-only">
+                  Équipe B (ligne {i + 1})
+                </Label>
+                <select
+                  id={`away_team_id_${i}`}
+                  name={`away_team_id_${i}`}
+                  defaultValue=""
+                  className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  <option value="">— Équipe B —</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

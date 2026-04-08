@@ -5,6 +5,7 @@ import type {
   Article,
   TimelineEvent,
   Matchday,
+  Match,
   DashboardData,
   ManagerWithTeam,
   StandingsHistoryWithManager,
@@ -279,6 +280,265 @@ export async function getMatchdays(seasonId: string): Promise<Matchday[]> {
   return (data || []) as Matchday[]
 }
 
+export async function getMatchdayBySeasonAndNumber(
+  seasonId: string,
+  number: number
+): Promise<Matchday | null> {
+  if (!Number.isFinite(number) || number < 1) return null
+
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('matchdays')
+    .select('*')
+    .eq('season_id', seasonId)
+    .eq('number', number)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching matchday by season and number:', error)
+    return null
+  }
+
+  return data as Matchday | null
+}
+
+/** Journée avec matchs embarqués (requête unique `matchdays` + `matches`). */
+export type MatchdayWithMatches = Matchday & { matches: Match[] }
+
+/** PostgREST peut renvoyer un seul enfant comme objet au lieu d’un tableau. */
+function normalizeEmbeddedMatches(raw: unknown): Match[] {
+  if (raw == null) return []
+  if (Array.isArray(raw)) return raw as Match[]
+  if (typeof raw === 'object') return [raw as Match]
+  return []
+}
+
+/**
+ * Toutes les journées d’une saison avec leurs matchs.
+ * Essaie d’abord un embed `matchdays → matches` via la FK **`matches.matchday_id`** (comme `getMatchResults`).
+ * Si l’embed échoue (relation non exposée, autre nom de contrainte, etc.), repli sur le même schéma que
+ * `getMatchResults` : `matchdays` puis `matches` avec `.in('matchday_id', …)`.
+ */
+export async function getMatchdaysWithMatchesForSeason(
+  seasonId: string
+): Promise<{ matchdays: MatchdayWithMatches[]; error: string | null }> {
+  const supabase = await createClient()
+
+  const matchColumns =
+    'id, matchday_id, home_team_id, away_team_id, home_score, away_score, created_at'
+
+  const embedded = await supabase
+    .from('matchdays')
+    .select(`*, matches ( ${matchColumns} )`)
+    .eq('season_id', seasonId)
+    .order('number', { ascending: false })
+
+  if (!embedded.error && embedded.data) {
+    const matchdays: MatchdayWithMatches[] = embedded.data.map((row) => {
+      const raw = row as Matchday & { matches?: unknown }
+      const { matches: embeddedRaw, ...md } = raw
+      return {
+        ...(md as Matchday),
+        matches: normalizeEmbeddedMatches(embeddedRaw),
+      }
+    })
+    return { matchdays, error: null }
+  }
+
+  if (embedded.error) {
+    console.warn(
+      'matchdays+matches embed indisponible, repli sur requêtes séparées (matchday_id) :',
+      embedded.error.message
+    )
+  }
+
+  const { data: mdsRaw, error: mdErr } = await supabase
+    .from('matchdays')
+    .select('*')
+    .eq('season_id', seasonId)
+    .order('number', { ascending: false })
+
+  if (mdErr) {
+    console.error('Error fetching matchdays (historique fallback):', mdErr)
+    return {
+      matchdays: [],
+      error: embedded.error?.message ?? mdErr.message,
+    }
+  }
+
+  const mds = (mdsRaw ?? []) as Matchday[]
+  const matchdayIds = mds.map((m) => m.id)
+  if (matchdayIds.length === 0) {
+    return { matchdays: [], error: null }
+  }
+
+  const { data: matchesRaw, error: mErr } = await supabase
+    .from('matches')
+    .select(matchColumns)
+    .in('matchday_id', matchdayIds)
+
+  if (mErr) {
+    console.error('Error fetching matches (historique fallback):', mErr)
+    return { matchdays: [], error: mErr.message }
+  }
+
+  const byMd = new Map<string, Match[]>()
+  for (const row of matchesRaw ?? []) {
+    const m = row as Match
+    const id = m.matchday_id
+    if (!byMd.has(id)) byMd.set(id, [])
+    byMd.get(id)!.push(m)
+  }
+
+  const matchdays: MatchdayWithMatches[] = mds.map((md) => ({
+    ...md,
+    matches: byMd.get(md.id) ?? [],
+  }))
+
+  return { matchdays, error: null }
+}
+
+/**
+ * Punchline éditoriale (table `punchlines` : `season_id`, `matchday_number`, `text`).
+ */
+export async function getPunchlineForSeasonMatchday(
+  seasonId: string,
+  matchdayNumber: number
+): Promise<string | null> {
+  const sid = seasonId?.trim()
+  if (!sid || !Number.isFinite(matchdayNumber) || matchdayNumber < 1) return null
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('punchlines')
+    .select('text')
+    .eq('season_id', sid)
+    .eq('matchday_number', matchdayNumber)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    return null
+  }
+
+  const row = data as { text?: string } | null
+  const t = row?.text
+  return typeof t === 'string' && t.trim() !== '' ? t.trim() : null
+}
+
+export async function getMatchesForMatchday(matchdayId: string): Promise<Match[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('matchday_id', matchdayId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching matches for matchday:', error)
+    return []
+  }
+
+  return (data ?? []).map((m) => ({
+    id: m.id,
+    matchday_id: m.matchday_id,
+    home_team_id: m.home_team_id,
+    away_team_id: m.away_team_id,
+    home_score: m.home_score != null ? Number(m.home_score) : null,
+    away_score: m.away_score != null ? Number(m.away_score) : null,
+    summary: m.summary ?? null,
+    hero_name: m.hero_name ?? null,
+    flop_name: m.flop_name ?? null,
+    created_at: m.created_at ?? null,
+  })) as Match[]
+}
+
+export type MatchdayEpisodePageData = {
+  league: League
+  season: Season
+  matchday: Matchday
+  /** Numéros de journée présents dans `matchdays` pour cette saison (triés), pour la navigation épisode. */
+  navMatchdayNumbers: number[]
+  managers: ManagerWithTeam[]
+  matchesForMatchday: Match[]
+  validatedMatchRows: ValidatedMatchRow[]
+  standingsHistory: StandingsHistoryWithManager[]
+  matchDataStatus: DashboardMatchDataStatus
+  matchDataIssues: string[]
+  matchesLoadError: string | null
+}
+
+/**
+ * Données pour la page épisode `/ligue/[slug]/j/[matchday]`.
+ * Retourne `null` si la ligue, la saison courante ou la journée (numéro dans la saison) n’existe pas.
+ */
+export async function getMatchdayEpisodePageData(
+  leagueSlug: string,
+  matchdayNumber: number
+): Promise<MatchdayEpisodePageData | null> {
+  const league = await getLeagueBySlug(leagueSlug)
+  if (!league) return null
+
+  const season = await getCurrentSeason(league.id)
+  if (!season) return null
+
+  const matchday = await getMatchdayBySeasonAndNumber(season.id, matchdayNumber)
+  if (!matchday) return null
+
+  const [managers, matchBundle, matchesForMatchday, seasonMatchdays] = await Promise.all([
+    getManagers(league.id, season.id),
+    getMatchResults(season.id),
+    getMatchesForMatchday(matchday.id),
+    getMatchdays(season.id),
+  ])
+
+  const navMatchdayNumbers = [...new Set(seasonMatchdays.map((m) => m.number))]
+    .filter((n) => Number.isFinite(n) && n >= 1)
+    .sort((a, b) => a - b)
+
+  const { rows: matchResults, error: matchesLoadError } = matchBundle
+
+  let matchDataStatus: DashboardMatchDataStatus = 'empty'
+  let matchDataIssues: string[] = []
+  let validatedMatchRows: ValidatedMatchRow[] = []
+  let standingsHistory: StandingsHistoryWithManager[] = []
+
+  if (matchesLoadError) {
+    matchDataStatus = 'load_error'
+    matchDataIssues = [
+      `Impossible de charger les résultats (tables « matchdays » / « matches »). Détail : ${matchesLoadError}`,
+    ]
+  } else if (matchResults.length === 0) {
+    matchDataStatus = 'empty'
+  } else {
+    const { issues, validRows } = validateSeasonMatchResults(managers, matchResults)
+    if (issues.length > 0) {
+      matchDataStatus = 'invalid'
+      matchDataIssues = issues
+    } else {
+      matchDataStatus = 'ready'
+      validatedMatchRows = validRows
+      standingsHistory = computeStandingsHistoryFromMatches(season.id, managers, validatedMatchRows)
+    }
+  }
+
+  return {
+    league,
+    season,
+    matchday,
+    navMatchdayNumbers,
+    managers,
+    matchesForMatchday,
+    validatedMatchRows,
+    standingsHistory,
+    matchDataStatus,
+    matchDataIssues,
+    matchesLoadError,
+  }
+}
+
 /** @legacy Non utilisé par `getDashboardData` ; calendrier éditorial optionnel hors scope dashboard. */
 export async function getCurrentMatchday(seasonId: string): Promise<Matchday | null> {
   const supabase = await createClient()
@@ -340,6 +600,7 @@ function emptyDashboard(
     articles: [],
     timelineEvents: [],
     currentMatchday: null,
+    matchdayPunchlineFromTable: null,
     ...overrides,
   }
 }
@@ -383,6 +644,7 @@ export async function getDashboardData(
   let validatedMatchRows: ValidatedMatchRow[] = []
   let standingsHistory: StandingsHistoryWithManager[] = []
   let currentMatchday: Matchday | null = null
+  let matchdayPunchlineFromTable: string | null = null
 
   if (matchesLoadError) {
     matchDataStatus = 'load_error'
@@ -402,16 +664,23 @@ export async function getDashboardData(
       standingsHistory = computeStandingsHistoryFromMatches(season.id, managers, validatedMatchRows)
       const n = maxMatchdayFromMatches(validatedMatchRows)
       if (n > 0) {
-        currentMatchday = {
-          id: `derived-md-${season.id}`,
-          season_id: season.id,
-          number: n,
-          title: null,
-          status: 'completed',
-          created_at: null,
-        }
+        const dbMd = await getMatchdayBySeasonAndNumber(season.id, n)
+        currentMatchday =
+          dbMd ??
+          ({
+            id: `derived-md-${season.id}`,
+            season_id: season.id,
+            number: n,
+            title: null,
+            status: 'completed',
+            created_at: null,
+          } as Matchday)
       }
     }
+  }
+
+  if (season && currentMatchday && currentMatchday.number >= 1) {
+    matchdayPunchlineFromTable = await getPunchlineForSeasonMatchday(season.id, currentMatchday.number)
   }
 
   return {
@@ -428,5 +697,6 @@ export async function getDashboardData(
     articles,
     timelineEvents,
     currentMatchday,
+    matchdayPunchlineFromTable,
   }
 }

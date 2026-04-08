@@ -47,7 +47,7 @@ export default async function AdminMatchResultsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl space-y-8 px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-4xl space-y-8 px-4 py-8 sm:px-6 sm:py-10">
         <header className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Admin · workflow hebdomadaire
@@ -57,7 +57,7 @@ export default async function AdminMatchResultsPage() {
             Saisie des résultats
           </h1>
           <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Après chaque journée : une ligne par match dans{" "}
+            Après chaque journée : saisir tous les matchs d’un coup (grille) — une ligne par rencontre dans{" "}
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matches</code> (via{" "}
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matchday_id</code> →{" "}
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matchdays</code>). Le classement et

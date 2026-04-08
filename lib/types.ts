@@ -40,6 +40,8 @@ export interface Matchday {
   title: string | null
   status: string | null
   created_at: string | null
+  /** Optionnel : colonne éditoriale si présente en base. */
+  punchline?: string | null
 }
 
 export interface Match {
@@ -183,4 +185,6 @@ export interface DashboardData {
    * La table `matchdays` n’est plus chargée pour le dashboard principal.
    */
   currentMatchday: Matchday | null
+  /** Punchline (`punchlines.text` pour `season_id` + `matchday_number` courants), si présente. */
+  matchdayPunchlineFromTable: string | null
 }

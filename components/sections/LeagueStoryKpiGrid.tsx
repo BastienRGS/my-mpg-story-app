@@ -31,54 +31,96 @@ const accentFor: Record<LeagueStoryKpiSlug, string> = {
   match_of_round: "bg-chart-3/15 text-chart-3",
 }
 
-interface LeagueStoryKpiGridProps {
-  kpis: LeagueStoryKpi[]
+export function LeagueStoryKpiCard({ kpi, compact }: { kpi: LeagueStoryKpi; compact?: boolean }) {
+  const Icon = iconFor[kpi.slug]
+  return (
+    <Card
+      className={cn(
+        "border-border bg-card shadow-none transition-colors",
+        kpi.hasData && "border-border/80"
+      )}
+    >
+      <CardContent
+        className={cn(
+          "flex",
+          compact ? "gap-2.5 p-3 sm:gap-3 sm:p-4" : "gap-3 p-4 sm:gap-4 sm:p-5"
+        )}
+      >
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-lg sm:rounded-xl",
+            compact ? "h-9 w-9 sm:h-10 sm:w-10" : "h-11 w-11 sm:h-12 sm:w-12",
+            accentFor[kpi.slug]
+          )}
+        >
+          <Icon className={cn(compact ? "h-4 w-4 sm:h-5 sm:w-5" : "h-5 w-5 sm:h-6 sm:w-6")} aria-hidden />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "font-semibold uppercase tracking-wide text-muted-foreground",
+              compact ? "text-[10px] sm:text-[11px]" : "text-[11px]"
+            )}
+          >
+            {kpi.title}
+          </p>
+          <p
+            className={cn(
+              "mt-0.5 truncate font-bold text-foreground",
+              compact ? "text-sm sm:text-base" : "mt-1 text-base sm:text-lg"
+            )}
+          >
+            {kpi.teamLabel || kpi.managerName}
+          </p>
+          <p
+            className={cn(
+              "truncate text-muted-foreground",
+              compact ? "text-[11px] sm:text-xs" : "mt-0.5 text-xs sm:text-sm"
+            )}
+          >
+            {kpi.managerName}
+          </p>
+          <p
+            className={cn(
+              "leading-relaxed text-muted-foreground",
+              compact ? "mt-1 line-clamp-2 text-[11px] sm:text-xs" : "mt-2 text-xs sm:text-sm"
+            )}
+          >
+            {kpi.detail}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
-export function LeagueStoryKpiGrid({ kpis }: LeagueStoryKpiGridProps) {
+interface LeagueStoryKpiGridProps {
+  kpis: LeagueStoryKpi[]
+  /** Titre de section (défaut : Les grands récits) */
+  sectionTitle?: string
+  sectionDescription?: string
+  compact?: boolean
+}
+
+export function LeagueStoryKpiGrid({
+  kpis,
+  sectionTitle = "Les grands récits",
+  sectionDescription = "Indicateurs calculés à partir des résultats et du classement — pas de saisie manuelle.",
+  compact,
+}: LeagueStoryKpiGridProps) {
   return (
     <section className="space-y-3 sm:space-y-4">
       <header className="space-y-1 px-0.5">
-        <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">Les grands récits</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Indicateurs calculés à partir des résultats et du classement — pas de saisie manuelle.
-        </p>
+        <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">{sectionTitle}</h2>
+        {sectionDescription ? (
+          <p className="text-sm leading-relaxed text-muted-foreground">{sectionDescription}</p>
+        ) : null}
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-        {kpis.map((kpi) => {
-          const Icon = iconFor[kpi.slug]
-          return (
-            <Card
-              key={kpi.slug}
-              className={cn(
-                "border-border bg-card shadow-none transition-colors",
-                kpi.hasData && "border-border/80"
-              )}
-            >
-              <CardContent className="flex gap-3 p-4 sm:gap-4 sm:p-5">
-                <div
-                  className={cn(
-                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12",
-                    accentFor[kpi.slug]
-                  )}
-                >
-                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {kpi.title}
-                  </p>
-                  <p className="mt-1 truncate text-base font-bold text-foreground sm:text-lg">
-                    {kpi.teamLabel || kpi.managerName}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">{kpi.managerName}</p>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">{kpi.detail}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+        {kpis.map((kpi) => (
+          <LeagueStoryKpiCard key={kpi.slug} kpi={kpi} compact={compact} />
+        ))}
       </div>
     </section>
   )
