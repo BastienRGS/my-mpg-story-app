@@ -12,6 +12,8 @@ import { submitBulkMatchResults, type MatchEntryActionState } from "./actions"
 export type LeagueOption = {
   slug: string
   name: string
+  /** Saison `is_current` pour cette ligue (alignée avec les actions serveur). */
+  seasonId: string | null
   teams: { id: string; label: string }[]
 }
 
@@ -20,10 +22,10 @@ const MAX_ROWS = 40
 
 const initialState: MatchEntryActionState = { ok: false, message: "" }
 
-function SubmitButton() {
+function SubmitButton({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus()
   return (
-    <Button type="submit" disabled={pending} className="w-full sm:w-auto">
+    <Button type="submit" disabled={pending || disabled} className="w-full sm:w-auto">
       {pending ? "Enregistrement…" : "Enregistrer tous les matchs"}
     </Button>
   )
@@ -31,17 +33,21 @@ function SubmitButton() {
 
 interface MatchEntryFormProps {
   leagueOptions: LeagueOption[]
-  defaultLeagueSlug: string
+  /** Contrôlé par le sélecteur de ligue (onglets) au-dessus du formulaire. */
+  leagueSlug: string
 }
 
-export function MatchEntryForm({ leagueOptions, defaultLeagueSlug }: MatchEntryFormProps) {
+export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProps) {
   const [state, formAction] = useActionState(submitBulkMatchResults, initialState)
-  const [leagueSlug, setLeagueSlug] = useState(defaultLeagueSlug)
   const [numRows, setNumRows] = useState(DEFAULT_ROWS)
 
-  const teams = useMemo(() => {
-    return leagueOptions.find((l) => l.slug === leagueSlug)?.teams ?? []
-  }, [leagueOptions, leagueSlug])
+  const activeLeague = useMemo(
+    () => leagueOptions.find((l) => l.slug === leagueSlug),
+    [leagueOptions, leagueSlug]
+  )
+  const teams = activeLeague?.teams ?? []
+  const seasonId = activeLeague?.seasonId ?? ""
+  const canSubmit = teams.length >= 2 && Boolean(seasonId)
 
   useEffect(() => {
     setNumRows(DEFAULT_ROWS)
@@ -52,6 +58,7 @@ export function MatchEntryForm({ leagueOptions, defaultLeagueSlug }: MatchEntryF
   return (
     <form action={formAction} className="space-y-6 rounded-xl border border-border bg-card p-4 sm:p-6">
       <input type="hidden" name="leagueSlug" value={leagueSlug} />
+      <input type="hidden" name="seasonId" value={seasonId} />
       <input type="hidden" name="row_count" value={numRows} />
 
       <div className="space-y-2">
@@ -71,23 +78,23 @@ export function MatchEntryForm({ leagueOptions, defaultLeagueSlug }: MatchEntryF
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="leagueSelect">Ligue</Label>
-        <select
-          id="leagueSelect"
-          value={leagueSlug}
-          onChange={(e) => setLeagueSlug(e.target.value)}
-          required
-          className="border-input flex h-9 w-full max-w-md rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      {!canSubmit ? (
+        <div
+          className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-muted-foreground"
+          role="status"
         >
-          {leagueOptions.map((l) => (
-            <option key={l.slug} value={l.slug} disabled={l.teams.length < 2}>
-              {l.name}
-              {l.teams.length < 2 ? " (équipes insuffisantes)" : ""}
-            </option>
-          ))}
-        </select>
-      </div>
+          {teams.length < 2 ? (
+            <>
+              Au moins <strong className="text-foreground">deux équipes</strong> sont nécessaires pour la
+              saison courante de cette ligue. Complétez le roster dans Supabase ou choisissez une autre
+              ligue.
+            </>
+          ) : (
+            <>Aucune saison courante (<code className="rounded bg-muted px-1">is_current</code>) pour cette
+              ligue — créez ou marquez une saison dans Supabase.</>
+          )}
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="matchday_number">Journée (numéro)</Label>
@@ -237,7 +244,7 @@ export function MatchEntryForm({ leagueOptions, defaultLeagueSlug }: MatchEntryF
         </p>
       ) : null}
 
-      <SubmitButton />
+      <SubmitButton disabled={!canSubmit} />
     </form>
   )
 }

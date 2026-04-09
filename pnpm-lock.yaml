@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  react-is: 19.2.4
+
 importers:
 
   .:
@@ -143,6 +146,9 @@ importers:
       react-hook-form:
         specifier: ^7.54.1
         version: 7.71.2(react@19.2.4)
+      react-is:
+        specifier: 19.2.4
+        version: 19.2.4
       react-resizable-panels:
         specifier: ^2.1.7
         version: 2.1.9(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1631,11 +1637,8 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
 
-  react-is@16.13.1:
-    resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
-
-  react-is@18.3.1:
-    resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
+  react-is@19.2.4:
+    resolution: {integrity: sha512-W+EWGn2v0ApPKgKKCy/7s7WHXkboGcsrXE+2joLyVxkbyVQfO3MUEaUQDHoSmb8TFFrSKYa9mw64WZHNHSDzYA==}
 
   react-remove-scroll-bar@2.3.8:
     resolution: {integrity: sha512-9r+yi9+mgU33AKcj6IbT9oRCO78WriSj6t/cF8DWBZJ9aOGPOTEDvdUDz1FwKim7QXWwmHqtdHnRJfhAxEG46Q==}
@@ -3114,7 +3117,7 @@ snapshots:
     dependencies:
       loose-envify: 1.4.0
       object-assign: 4.1.1
-      react-is: 16.13.1
+      react-is: 19.2.4
 
   react-day-picker@9.13.2(react@19.2.4):
     dependencies:
@@ -3132,9 +3135,7 @@ snapshots:
     dependencies:
       react: 19.2.4
 
-  react-is@16.13.1: {}
-
-  react-is@18.3.1: {}
+  react-is@19.2.4: {}
 
   react-remove-scroll-bar@2.3.8(@types/react@19.2.14)(react@19.2.4):
     dependencies:
@@ -3198,7 +3199,7 @@ snapshots:
       lodash: 4.17.23
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
-      react-is: 18.3.1
+      react-is: 19.2.4
       react-smooth: 4.0.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       recharts-scale: 0.4.5
       tiny-invariant: 1.3.3

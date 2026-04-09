@@ -184,6 +184,8 @@ export async function submitBulkMatchResults(
 
   const { leagueSlug, matchday_number, row_count } = parsedMeta.data
 
+  const seasonIdFromForm = String(formData.get("seasonId") ?? "").trim()
+
   const league = await getLeagueBySlug(leagueSlug)
   if (!league) {
     return { ok: false, message: "Ligue introuvable." }
@@ -192,6 +194,13 @@ export async function submitBulkMatchResults(
   const season = await getCurrentSeason(league.id)
   if (!season) {
     return { ok: false, message: "Aucune saison courante pour cette ligue." }
+  }
+
+  if (seasonIdFromForm && seasonIdFromForm !== season.id) {
+    return {
+      ok: false,
+      message: "La saison active a changé : rechargez la page puis réessayez.",
+    }
   }
 
   type ParsedRow =

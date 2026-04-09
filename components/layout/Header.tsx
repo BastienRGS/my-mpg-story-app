@@ -9,8 +9,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -52,58 +50,26 @@ export function Header({ onMenuClick, league, season, allLeagues = [] }: HeaderP
             </Button>
           ) : null}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "h-9 min-w-0 max-w-full gap-1.5 px-2 font-semibold text-foreground sm:h-10 sm:gap-2 sm:px-3",
-                  "border-0 bg-secondary/40 hover:bg-secondary/60 sm:border sm:border-border sm:bg-background"
-                )}
-              >
-                <span className="truncate text-left text-sm sm:text-base">
-                  {league?.name || "Ligue"}
-                </span>
-                <ChevronDown className="hidden h-4 w-4 shrink-0 opacity-50 sm:inline" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[min(100vw-2rem,280px)]">
-              {switcherLeagues.length > 1 ? (
-                <>
-                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                    Changer de ligue
-                  </DropdownMenuLabel>
-                  {switcherLeagues.map((l) => (
-                    <DropdownMenuItem
-                      key={l.id}
-                      className={cn("p-0", l.id === league?.id && "bg-accent/50")}
-                      asChild
-                    >
-                      <Link
-                        href={`/ligue/${encodeURIComponent(l.slug)}`}
-                        className="flex w-full cursor-pointer items-center px-2 py-1.5"
-                      >
-                        <span className="truncate font-medium">{l.name}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                </>
-              ) : null}
-              <div className="px-2 py-1.5 text-sm font-medium">{league?.name || "Ligue"}</div>
-              {season?.name ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground md:hidden">
-                    Saison active · {season.name}
-                  </div>
-                  <div className="hidden px-2 py-1.5 text-xs text-muted-foreground md:block">
-                    {season.name}
-                  </div>
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {switcherLeagues.length > 1 ? (
+            <div className="flex items-center gap-1 rounded-lg bg-secondary/40 p-1">
+              {switcherLeagues.map((l) => (
+                <Link
+                  key={l.id}
+                  href={`/ligue/${encodeURIComponent(l.slug)}`}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                    l.id === league?.id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {l.name}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <span className="text-sm font-semibold">{league?.name}</span>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

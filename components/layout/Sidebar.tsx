@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button"
 
 const iconMap: Record<string, React.ElementType> = {
   LayoutDashboard,
-  Trophy,
   Calendar,
   Users,
   Award,
@@ -30,7 +29,6 @@ const iconMap: Record<string, React.ElementType> = {
 
 const navItems = [
   { id: "dashboard", label: "Tableau de bord", icon: "LayoutDashboard" },
-  { id: "classement", label: "Classement", icon: "Trophy" },
   { id: "calendrier", label: "Calendrier", icon: "Calendar" },
   { id: "managers", label: "Managers", icon: "Users" },
   { id: "trophees", label: "Trophees", icon: "Award" },
