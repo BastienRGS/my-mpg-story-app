@@ -88,6 +88,17 @@ export function LeagueStoryKpiCard({ kpi, compact }: { kpi: LeagueStoryKpi; comp
           >
             {kpi.detail}
           </p>
+          {kpi.loreSubtitle ? (
+            <p
+              title={kpi.loreSubtitle}
+              className={cn(
+                "italic text-foreground/80",
+                compact ? "mt-1 line-clamp-3 text-[10px] sm:text-[11px]" : "mt-1.5 line-clamp-3 text-[11px] sm:text-xs"
+              )}
+            >
+              {kpi.loreSubtitle}
+            </p>
+          ) : null}
         </div>
       </CardContent>
     </Card>

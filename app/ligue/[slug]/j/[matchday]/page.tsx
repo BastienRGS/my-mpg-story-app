@@ -8,6 +8,11 @@ import {
   computeLeagueStoryKpis,
 } from "@/lib/league-story-kpis"
 import { buildAutomaticMatchdaySummary } from "@/lib/matchday-episode-summary"
+import {
+  getLoreForMatch,
+  getScorelineLoreCaption,
+  goldenRoostersWonAny,
+} from "@/lib/league-lore"
 import { LeagueStoryKpiCard, LeagueStoryKpiGrid } from "@/components/sections/LeagueStoryKpiGrid"
 import StandingsEvolutionChart from "@/components/charts/StandingsEvolutionChart"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -208,6 +213,28 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
     return (b.points ?? 0) - (a.points ?? 0)
   })
 
+  const loreScoreRows = matchesForMatchday
+    .filter((m) => m.home_score != null && m.away_score != null)
+    .map((m) => ({
+      homeName: labelTeamId(managers, m.home_team_id),
+      awayName: labelTeamId(managers, m.away_team_id),
+      homeScore: m.home_score!,
+      awayScore: m.away_score!,
+    }))
+  const mafiaTicker = goldenRoostersWonAny(loreScoreRows)
+  const loreHooksForDay = [
+    ...new Set(
+      matchesForMatchday
+        .map((m) =>
+          getLoreForMatch(
+            labelTeamId(managers, m.home_team_id),
+            labelTeamId(managers, m.away_team_id)
+          )
+        )
+        .filter((h): h is string => Boolean(h))
+    ),
+  ]
+
   const heroTitle = matchday.title?.trim() || `Journée ${matchdayNumber}`
   const heroSubtitle = `${league.name} · ${season.name} · ${matchdayStatusLabel(matchday.status)}`
 
@@ -323,31 +350,92 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
           <h2 id="choc-heading" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
             Le choc de la J{matchdayNumber}
           </h2>
+          {mafiaTicker ? (
+            <div
+              className="relative overflow-hidden rounded-md border border-amber-600/35 bg-amber-500/15 dark:bg-amber-950/40"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex min-h-9 items-center justify-center gap-2 px-3 py-2 sm:px-4">
+                <span className="shrink-0 rounded-sm bg-amber-600/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white dark:bg-amber-500 dark:text-amber-950">
+                  Flash
+                </span>
+                <p className="text-center text-xs font-semibold uppercase tracking-wide text-amber-950 dark:text-amber-100 sm:text-sm">
+                  La Mafia Rolandèse valide — la dynastie a encore frappé sur cette journée.
+                </p>
+              </div>
+            </div>
+          ) : null}
           {matchesForMatchday.length > 0 ? (
             <Card className="border-border bg-card shadow-none">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Tous les scores</CardTitle>
                 <CardDescription>Résultats enregistrés pour cette journée.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {matchesForMatchday.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/10 px-3 py-2"
-                  >
-                    <span className="font-medium text-foreground">
-                      {labelTeamId(managers, m.home_team_id)} — {labelTeamId(managers, m.away_team_id)}
-                    </span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {m.home_score ?? "—"} – {m.away_score ?? "—"}
-                    </span>
-                  </div>
-                ))}
+              <CardContent className="space-y-3 text-sm">
+                {matchesForMatchday.map((m) => {
+                  const homeLabel = labelTeamId(managers, m.home_team_id)
+                  const awayLabel = labelTeamId(managers, m.away_team_id)
+                  const hs = m.home_score
+                  const awaySc = m.away_score
+                  const caption =
+                    hs != null && awaySc != null
+                      ? getScorelineLoreCaption(homeLabel, awayLabel, hs, awaySc)
+                      : null
+                  return (
+                    <div
+                      key={m.id}
+                      className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium text-foreground">
+                          {homeLabel} — {awayLabel}
+                        </span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {m.home_score ?? "—"} – {m.away_score ?? "—"}
+                        </span>
+                      </div>
+                      {caption ? (
+                        <p className="mt-1.5 text-pretty text-xs italic leading-relaxed text-muted-foreground sm:text-sm">
+                          {caption}
+                        </p>
+                      ) : null}
+                    </div>
+                  )
+                })}
               </CardContent>
             </Card>
           ) : (
             <p className="text-sm text-muted-foreground">Aucun score saisi pour cette journée.</p>
           )}
+
+          {matchesForMatchday.length > 0 ? (
+            <section className="space-y-2" aria-labelledby="lore-context-heading">
+              <h3
+                id="lore-context-heading"
+                className="text-base font-semibold tracking-tight text-foreground"
+              >
+                Contexte historique
+              </h3>
+              <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+                Neuf saisons de hauts et de bas : certaines affiches réveillent des histoires plus vieilles que le
+                classement du moment.
+              </p>
+              {loreHooksForDay.length > 0 ? (
+                <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-foreground">
+                  {loreHooksForDay.map((hook, i) => (
+                    <li key={i} className="text-pretty italic text-muted-foreground">
+                      {hook}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm italic text-muted-foreground">
+                  Aucune rivalité « scriptée » pour ces duels — le lore garde le silence, pour l’instant.
+                </p>
+              )}
+            </section>
+          ) : null}
         </section>
 
         {/* 5. Les grands récits */}

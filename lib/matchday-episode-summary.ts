@@ -1,4 +1,5 @@
 import type { LeagueStoryKpi } from "@/lib/league-story-kpis"
+import { getLoreKpiAccent } from "@/lib/league-lore"
 import type { ManagerWithTeam, StandingsHistoryWithManager, ValidatedMatchRow } from "@/lib/types"
 
 function displayName(m: ManagerWithTeam): string {
@@ -31,9 +32,12 @@ export function buildAutomaticMatchdaySummary(params: {
   const bits: string[] = [intro]
 
   if (managerOfWeek.hasData) {
-    bits.push(
-      `${managerOfWeek.teamLabel} (${managerOfWeek.managerName}) : ${managerOfWeek.detail.replace(/\.$/, "")}.`
-    )
+    let mgrLine = `${managerOfWeek.teamLabel} (${managerOfWeek.managerName}) : ${managerOfWeek.detail.replace(/\.$/, "")}.`
+    const mgrAccent = getLoreKpiAccent(managerOfWeek.teamLabel, "hot_coach")
+    if (mgrAccent) {
+      mgrLine = `${mgrLine} ${mgrAccent}`
+    }
+    bits.push(mgrLine)
   }
 
   if (matchOfWeek.hasData) {

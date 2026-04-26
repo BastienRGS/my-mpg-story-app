@@ -1,4 +1,5 @@
 import type { ManagerWithTeam, StandingsHistoryWithManager, ValidatedMatchRow } from "@/lib/types"
+import { getLoreForCoach, getLoreForMatch, getLoreKpiAccent } from "@/lib/league-lore"
 
 export type LeagueStoryKpiSlug =
   | "hot_coach"
@@ -16,6 +17,8 @@ export type LeagueStoryKpi = {
   teamLabel: string
   detail: string
   hasData: boolean
+  /** Tag ou phrase narrative (lore ligue), affichée en complément du détail. */
+  loreSubtitle?: string | null
 }
 
 function displayName(m: ManagerWithTeam): string {
@@ -31,6 +34,22 @@ function labelForTeamId(managers: ManagerWithTeam[], teamId: string): string {
   return m ? displayName(m) : "Équipe"
 }
 
+function loreSubtitleForKpi(
+  slug: LeagueStoryKpiSlug,
+  teamLabel: string
+): string | null {
+  if (
+    slug === "hot_coach" ||
+    slug === "crisis_coach" ||
+    slug === "match_of_round" ||
+    slug === "comeback"
+  ) {
+    const accent = getLoreKpiAccent(teamLabel, slug)
+    if (accent) return accent
+  }
+  return getLoreForCoach(teamLabel)
+}
+
 function empty(slug: LeagueStoryKpiSlug, title: string): LeagueStoryKpi {
   return {
     slug,
@@ -39,6 +58,7 @@ function empty(slug: LeagueStoryKpiSlug, title: string): LeagueStoryKpi {
     teamLabel: "",
     detail: "Pas encore assez de données.",
     hasData: false,
+    loreSubtitle: null,
   }
 }
 
@@ -85,13 +105,15 @@ export function computeLeagueStoryKpis(
     }
     if (bestId && bestDelta > 0) {
       const mgr = managerById(managers, bestId)!
+      const teamLabel = displayName(mgr)
       hot = {
         slug: "hot_coach",
         title: "Coach en feu",
         managerName: mgr.name,
-        teamLabel: displayName(mgr),
+        teamLabel,
         detail: `+${bestDelta} place${bestDelta > 1 ? "s" : ""} après la J${lastMd}.`,
         hasData: true,
+        loreSubtitle: loreSubtitleForKpi("hot_coach", teamLabel),
       }
     }
   }
@@ -119,13 +141,15 @@ export function computeLeagueStoryKpis(
       const ls = rowAt(lastMd, worstId)?.lose_streak
       const streakBit =
         ls && ls >= 2 ? ` Série de ${ls} défaites.` : ""
+      const teamLabel = displayName(mgr)
       crisis = {
         slug: "crisis_coach",
         title: "Coach en crise",
         managerName: mgr.name,
-        teamLabel: displayName(mgr),
+        teamLabel,
         detail: `−${worstDrop} place${worstDrop > 1 ? "s" : ""} après la J${lastMd}.${streakBit}`,
         hasData: true,
+        loreSubtitle: loreSubtitleForKpi("crisis_coach", teamLabel),
       }
     }
   }
@@ -147,13 +171,15 @@ export function computeLeagueStoryKpis(
     }
     if (bestId && best > 0) {
       const mgr = managerById(managers, bestId)!
+      const teamLabel = displayName(mgr)
       comeback = {
         slug: "comeback",
         title: "Plus grosse remontée",
         managerName: mgr.name,
-        teamLabel: displayName(mgr),
+        teamLabel,
         detail: `Depuis la J${firstMd} : +${best} place${best > 1 ? "s" : ""}.`,
         hasData: true,
+        loreSubtitle: loreSubtitleForKpi("comeback", teamLabel),
       }
     }
   }
@@ -173,13 +199,15 @@ export function computeLeagueStoryKpis(
       )
       const bestD = byGa[0]
       const dRow = rowAt(lastMd, bestD.id)!
+      const wallLabel = displayName(bestD)
       wall = {
         slug: "defensive_wall",
         title: "Mur défensif",
         managerName: bestD.name,
-        teamLabel: displayName(bestD),
+        teamLabel: wallLabel,
         detail: `${dRow.goals_against ?? 0} but encaissé${(dRow.goals_against ?? 0) > 1 ? "s" : ""} après la J${lastMd}.`,
         hasData: true,
+        loreSubtitle: loreSubtitleForKpi("defensive_wall", wallLabel),
       }
 
       const byGf = [...eligible].sort(
@@ -188,13 +216,15 @@ export function computeLeagueStoryKpis(
       )
       const bestA = byGf[0]
       const aRow = rowAt(lastMd, bestA.id)!
+      const attackLabel = displayName(bestA)
       attack = {
         slug: "nuclear_attack",
         title: "Attaque nucléaire",
         managerName: bestA.name,
-        teamLabel: displayName(bestA),
+        teamLabel: attackLabel,
         detail: `${aRow.goals_for ?? 0} but marqué${(aRow.goals_for ?? 0) > 1 ? "s" : ""} après la J${lastMd}.`,
         hasData: true,
+        loreSubtitle: loreSubtitleForKpi("nuclear_attack", attackLabel),
       }
     }
   }
@@ -219,13 +249,15 @@ export function computeLeagueStoryKpis(
       const mgr = managerById(managers, leadMgrId)
       // « Sous pression » seulement si l’écart au 2e est crédiblement serré (sinon ce n’est pas un KPI narratif).
       if (mgr && gap >= 1 && gap <= 3) {
+        const teamLabel = displayName(mgr)
         pressure = {
           slug: "leader_pressure",
           title: "Leader sous pression",
           managerName: mgr.name,
-          teamLabel: displayName(mgr),
+          teamLabel,
           detail: `Seulement +${gap} pt${gap > 1 ? "s" : ""} sur le 2e après la J${lastMd}.`,
           hasData: true,
+          loreSubtitle: loreSubtitleForKpi("leader_pressure", teamLabel),
         }
       }
     }
@@ -250,13 +282,18 @@ export function computeLeagueStoryKpis(
     if (best && bestTotal >= 0) {
       const h = labelForTeamId(managers, best.home_team_id)
       const a = labelForTeamId(managers, best.away_team_id)
+      const hook = getLoreForMatch(h, a)
+      const scoreBit = `Score : ${best.home_score}–${best.away_score} (${bestTotal} but${bestTotal > 1 ? "s" : ""} au total).`
+      const loreLine =
+        loreSubtitleForKpi("match_of_round", h) ?? loreSubtitleForKpi("match_of_round", a)
       motw = {
         slug: "match_of_round",
         title: "Match de la journée",
         managerName: `${h} – ${a}`,
         teamLabel: `J${lastMd}`,
-        detail: `Score : ${best.home_score}–${best.away_score} (${bestTotal} but${bestTotal > 1 ? "s" : ""} au total).`,
+        detail: hook ? `${hook} ${scoreBit}` : scoreBit,
         hasData: true,
+        loreSubtitle: hook ? null : loreLine,
       }
     }
   }
@@ -329,16 +366,18 @@ export function computeLeaderStripKpi(
   const gap = second != null ? (top.points ?? 0) - (second.points ?? 0) : null
   const tight = gap != null && gap >= 1 && gap <= 3
 
+  const teamLabel = displayName(mgr)
   return {
     slug: "leader_pressure",
     title: tight ? "Leader sous pression" : "La tête du classement",
     managerName: mgr.name,
-    teamLabel: displayName(mgr),
+    teamLabel,
     detail:
       gap != null && second
         ? `+${gap} point${gap > 1 ? "s" : ""} sur le 2e après la J${lastMd}.`
         : `En tête après la J${lastMd}.`,
     hasData: true,
+    loreSubtitle: loreSubtitleForKpi("leader_pressure", teamLabel),
   }
 }
 
@@ -389,22 +428,26 @@ export function computeFormExtremeCoaches(
   const bestMgr = managerById(managers, bestScored.id)!
   const worstMgr = managerById(managers, worstScored.id)!
 
+  const bestLabel = displayName(bestMgr)
+  const worstLabel = displayName(worstMgr)
   return {
     best: {
       slug: "hot_coach",
       title: "Coach en feu",
       managerName: bestMgr.name,
-      teamLabel: displayName(bestMgr),
+      teamLabel: bestLabel,
       detail: `Forme récente : ${bestScored.form || "—"} (après la J${lastMd}).`,
       hasData: true,
+      loreSubtitle: loreSubtitleForKpi("hot_coach", bestLabel),
     },
     worst: {
       slug: "crisis_coach",
       title: "Coach en crise",
       managerName: worstMgr.name,
-      teamLabel: displayName(worstMgr),
+      teamLabel: worstLabel,
       detail: `Forme récente : ${worstScored.form || "—"} (après la J${lastMd}).`,
       hasData: true,
+      loreSubtitle: loreSubtitleForKpi("crisis_coach", worstLabel),
     },
   }
 }
@@ -505,13 +548,15 @@ export function computeManagerOfWeekForMatchday(
   if (!bestId || bestDelta <= 0) return base
 
   const mgr = managerById(managers, bestId)!
+  const teamLabel = displayName(mgr)
   return {
     slug: "hot_coach",
     title: "Manager de la semaine",
     managerName: mgr.name,
-    teamLabel: displayName(mgr),
+    teamLabel,
     detail: `+${bestDelta} place${bestDelta > 1 ? "s" : ""} par rapport à la J${prevMd}.`,
     hasData: true,
+    loreSubtitle: loreSubtitleForKpi("hot_coach", teamLabel),
   }
 }
 
@@ -541,12 +586,17 @@ export function computeMatchOfRoundForMatchday(
 
   const h = labelForTeamId(managers, best.home_team_id)
   const a = labelForTeamId(managers, best.away_team_id)
+  const hook = getLoreForMatch(h, a)
+  const scoreBit = `Score : ${best.home_score}–${best.away_score} (${bestTotal} but${bestTotal > 1 ? "s" : ""} au total).`
+  const loreLine =
+    loreSubtitleForKpi("match_of_round", h) ?? loreSubtitleForKpi("match_of_round", a)
   return {
     slug: "match_of_round",
     title: "Match de la semaine",
     managerName: `${h} – ${a}`,
     teamLabel: `J${matchdayNumber}`,
-    detail: `Score : ${best.home_score}–${best.away_score} (${bestTotal} but${bestTotal > 1 ? "s" : ""} au total).`,
+    detail: hook ? `${hook} ${scoreBit}` : scoreBit,
     hasData: true,
+    loreSubtitle: hook ? null : loreLine,
   }
 }
