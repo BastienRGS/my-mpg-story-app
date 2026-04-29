@@ -153,6 +153,30 @@ export interface ManagerWithTeam extends Manager {
   team?: Team
 }
 
+/** Carte « trombinoscope » page Managers (stats + palmarès + lore). */
+export interface ManagerCard {
+  id: string
+  name: string
+  teamName: string
+  currentLeague: "L1" | "L2"
+  rank: number | null
+  points: number | null
+  goalsFor: number | null
+  goalsAgainst: number | null
+  matchesPlayed: number | null
+  form: string | null
+  winStreak: number
+  loseStreak: number
+  loreTag: string | null
+  loreDescription: string | null
+  palmares: {
+    l1Titles: number
+    l2Titles: number
+    relegations: number
+    promotions: number
+  }
+}
+
 export interface StandingsHistoryWithManager extends StandingsHistory {
   manager?: Manager
 }

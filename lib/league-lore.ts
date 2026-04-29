@@ -127,6 +127,9 @@ export const RIVALRIES_AND_LORE = {
   },
 } as const
 
+/** Effectifs Saison 10 (L1 / L2) — source pour `resolveSeason10RosterTeamDivision` et pages managers. */
+export const CURRENT_SEASON_10_ROSTERS = RIVALRIES_AND_LORE.CURRENT_SEASON_10
+
 const GOLDEN_ROOSTERS_L1_TITLES = 5
 
 function stripDiacritics(s: string): string {
@@ -136,7 +139,10 @@ function stripDiacritics(s: string): string {
 /** Normalise pour comparaisons insensibles à la casse / accents / espaces. */
 export function normalizeTeamName(raw: string): string {
   let s = stripDiacritics(raw.trim().toLowerCase())
+  // F.C. / O.M.T. → espaces (évite les faux non-matchs roster vs base de données)
+  s = s.replace(/\./g, " ")
   s = s.replace(/['’]/g, "")
+  s = s.replace(/[-–—]/g, " ")
   s = s.replace(/\s+/g, " ")
   // Variantes orthographiques fréquentes
   if (s === "madinviet" || s.includes("mad in viet")) s = "madeinviet"
@@ -144,10 +150,15 @@ export function normalizeTeamName(raw: string): string {
   if (s.includes("olympique 2 marseille") || s.includes("olympik 2 marseille")) {
     s = s.replace(/olympique 2 marseille/g, "olympik 2 marseille")
   }
-  return s
+  // O.M.T. / j p p → omt, jpp (sans confondre avec des noms à plusieurs mots)
+  const squashed = s.replace(/\s/g, "")
+  if (s.includes(" ") && ["omt", "plr", "jpp"].includes(squashed)) {
+    s = squashed
+  }
+  return s.trim()
 }
 
-type TeamKey =
+export type TeamKey =
   | "jakattak"
   | "golden_roosters"
   | "bab_olympique"
@@ -174,7 +185,8 @@ const TEAM_RESOLVERS: { key: TeamKey; needles: string[] }[] = [
   { key: "deepblue", needles: ["deepblue", "deep blue"] },
 ]
 
-function resolveTeamKey(name: string): TeamKey | null {
+/** Résout une équipe vers une clé canonique (lore, palmarès, rivalités). */
+export function resolveTeamKey(name: string): TeamKey | null {
   const n = normalizeTeamName(name)
   for (const { key, needles } of TEAM_RESOLVERS) {
     for (const needle of needles) {
@@ -186,6 +198,109 @@ function resolveTeamKey(name: string): TeamKey | null {
   if (n === "plr" || /\bplr\b/.test(n)) return "plr"
   if (n.includes("goudal")) return "fc_goudal"
   return null
+}
+
+function sameTeamName(a: string, b: string): boolean {
+  if (normalizeTeamName(a) === normalizeTeamName(b)) return true
+  const ka = resolveTeamKey(a)
+  const kb = resolveTeamKey(b)
+  return ka != null && kb != null && ka === kb
+}
+
+/** Agrège titres L1/L2, relégations L1 et montées vers L1 depuis le palmarès canon. */
+export function getPalmarèsCountsForTeam(teamName: string): {
+  l1Titles: number
+  l2Titles: number
+  relegations: number
+  promotions: number
+} {
+  let l1Titles = 0
+  let l2Titles = 0
+  let relegations = 0
+  let promotions = 0
+  for (const p of PALMARES) {
+    if (sameTeamName(teamName, p.l1Winner)) l1Titles++
+    for (const r of p.l1Relegated) {
+      if (sameTeamName(teamName, r)) relegations++
+    }
+    if (sameTeamName(teamName, p.l2Winner)) l2Titles++
+    for (const pr of p.l2Promoted) {
+      if (sameTeamName(teamName, pr)) promotions++
+    }
+  }
+  return { l1Titles, l2Titles, relegations, promotions }
+}
+
+/** Clés connues dans les effectifs Saison 10 (CURRENT_SEASON_10) — secours si le nom affiché diverge du libellé roster. */
+const SEASON_10_TEAM_KEY_DIVISION: Partial<Record<TeamKey, "L1" | "L2">> = {
+  fc_goudal: "L1",
+  red_star: "L1",
+  omt: "L1",
+  jakattak: "L1",
+  mat_fc: "L1",
+  celtic_gossbo: "L1",
+  golden_roosters: "L1",
+  olympik2: "L1",
+  deepblue: "L2",
+  bab_olympique: "L2",
+  madeinviet: "L2",
+  plr: "L2",
+}
+
+function buildSeason10NormalizedRosterSets(): {
+  normL1: Set<string>
+  normL2: Set<string>
+  compactL1: Set<string>
+  compactL2: Set<string>
+} {
+  const s10 = RIVALRIES_AND_LORE.CURRENT_SEASON_10
+  const normL1 = new Set(s10.ligue1.map((t) => normalizeTeamName(t)))
+  const normL2 = new Set(s10.ligue2.map((t) => normalizeTeamName(t)))
+  const compactL1 = new Set(s10.ligue1.map((t) => normalizeTeamName(t).replace(/\s/g, "")))
+  const compactL2 = new Set(s10.ligue2.map((t) => normalizeTeamName(t).replace(/\s/g, "")))
+  return { normL1, normL2, compactL1, compactL2 }
+}
+
+const SEASON_10_ROSTER_SETS = buildSeason10NormalizedRosterSets()
+
+/**
+ * Résout L1/L2 pour la saison 10 à partir des listes `CURRENT_SEASON_10`.
+ * Compare les noms normalisés, formes compactes (sans espaces), puis `resolveTeamKey`, puis `sameTeamName`.
+ */
+export function resolveSeason10RosterTeamDivision(rawTeamName: string): {
+  league: "L1" | "L2"
+  matchedRoster: boolean
+} {
+  const trimmed = rawTeamName.trim()
+  const baseLabel = trimmed.split(/\s*[|/]\s*/)[0]?.trim() ?? trimmed
+  const n = normalizeTeamName(baseLabel)
+  const compact = n.replace(/\s/g, "")
+
+  const { normL1, normL2, compactL1, compactL2 } = SEASON_10_ROSTER_SETS
+
+  if (normL1.has(n)) return { league: "L1", matchedRoster: true }
+  if (normL2.has(n)) return { league: "L2", matchedRoster: true }
+  if (compactL1.has(compact)) return { league: "L1", matchedRoster: true }
+  if (compactL2.has(compact)) return { league: "L2", matchedRoster: true }
+
+  const key = resolveTeamKey(trimmed)
+  const byKey = key ? SEASON_10_TEAM_KEY_DIVISION[key] : undefined
+  if (byKey) return { league: byKey, matchedRoster: true }
+
+  const s10 = RIVALRIES_AND_LORE.CURRENT_SEASON_10
+  for (const t of s10.ligue1) {
+    if (sameTeamName(trimmed, t)) return { league: "L1", matchedRoster: true }
+  }
+  for (const t of s10.ligue2) {
+    if (sameTeamName(trimmed, t)) return { league: "L2", matchedRoster: true }
+  }
+
+  return { league: "L1", matchedRoster: false }
+}
+
+/** @deprecated Préférer `resolveSeason10RosterTeamDivision` pour le contrôle du matching. */
+export function getSeason10LeagueDivision(teamName: string): "L1" | "L2" {
+  return resolveSeason10RosterTeamDivision(teamName).league
 }
 
 function pairKeys(a: string, b: string): { ha: TeamKey | null; aw: TeamKey | null } {

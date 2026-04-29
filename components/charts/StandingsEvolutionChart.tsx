@@ -46,6 +46,8 @@ type Props = {
   managers: Manager[];
   /** Scope localStorage comparison prefs per league when set. */
   leagueId?: string | null;
+  /** Titre pédagogique masqué (une page apporte le titre) */
+  hideHeader?: boolean;
 };
 
 const STROKE_HUES = [210, 145, 35, 280, 175, 0, 320, 190] as const;
@@ -54,6 +56,7 @@ export default function StandingsEvolutionChart({
   standings,
   managers,
   leagueId,
+  hideHeader = false,
 }: Props) {
   const [isNarrow, setIsNarrow] = useState(false);
 
@@ -142,14 +145,16 @@ export default function StandingsEvolutionChart({
   if (managers.length === 0 || standings.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-card shadow-none">
-        <div className="space-y-1 border-b border-border/60 px-4 py-4 sm:px-6 sm:py-5">
-          <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            La bataille pour le titre
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Comparaison jusqu&apos;à 4 managers — rank 1 en haut.
-          </p>
-        </div>
+        {!hideHeader && (
+          <div className="space-y-1 border-b border-border/60 px-4 py-4 sm:px-6 sm:py-5">
+            <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
+              La bataille pour le titre
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Comparaison jusqu&apos;à 4 managers — rank 1 en haut.
+            </p>
+          </div>
+        )}
         <div className="px-4 py-12 text-center text-sm text-muted-foreground sm:px-6">
           Aucune donnée de classement pour le moment.
         </div>
@@ -159,15 +164,17 @@ export default function StandingsEvolutionChart({
 
   return (
     <div className="rounded-2xl border border-border bg-card shadow-none">
-      <div className="space-y-1 border-b border-border/60 px-4 py-4 sm:px-6 sm:py-5">
-        <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-          La bataille pour le titre
-        </h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Vous + jusqu&apos;à {maxExtra} autres coaches (4 courbes max). La 1<sup>re</sup> place en haut. Défilement
-          horizontal sur petit écran.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="space-y-1 border-b border-border/60 px-4 py-4 sm:px-6 sm:py-5">
+          <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
+            La bataille pour le titre
+          </h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Vous + jusqu&apos;à {maxExtra} autres coaches (4 courbes max). La 1<sup>re</sup> place en haut. Défilement
+            horizontal sur petit écran.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2 border-b border-border/60 px-4 py-3 sm:px-6">
         <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs">

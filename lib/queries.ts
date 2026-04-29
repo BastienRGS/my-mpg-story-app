@@ -12,9 +12,16 @@ import type {
   MatchResult,
   DashboardMatchDataStatus,
   ValidatedMatchRow,
+  ManagerCard,
 } from '@/lib/types'
 import { computeStandingsHistoryFromMatches, maxMatchdayFromMatches } from '@/lib/compute-standings-from-matches'
 import { validateSeasonMatchResults } from '@/lib/match-results-validation'
+import {
+  getLoreForCoach,
+  getPalmarèsCountsForTeam,
+  resolveSeason10RosterTeamDivision,
+  resolveTeamKey,
+} from '@/lib/league-lore'
 
 /** Options for loading dashboard data (multi-league ready). */
 export type GetDashboardDataOptions = {
@@ -160,6 +167,132 @@ export async function getStandingsHistory(seasonId: string): Promise<StandingsHi
   }
 
   return (data || []) as StandingsHistoryWithManager[]
+}
+
+type PalmarèsCounts = ManagerCard['palmares']
+
+/**
+ * Phrase d’accroche (1 ligne) pour la carte manager — règles éditoriales JAKATTAK.
+ * Générée ici pour garder `getManagersWithStats` autonome côté narratif.
+ */
+function buildManagerLoreDescription(teamName: string, palmares: PalmarèsCounts): string {
+  const key = resolveTeamKey(teamName)
+  if (key === 'golden_roosters') {
+    return '5 titres, une domination sans partage. La Mafia Rolandèse plane sur chaque journée.'
+  }
+  if (key === 'jakattak') {
+    return 'Fondateur de la ligue, exilé en L2 en S7, de retour pour récupérer son trône.'
+  }
+  if (key === 'bab_olympique') {
+    return "Premier champion de l'histoire, le fantôme du passé cherche son retour en L1."
+  }
+  if (key === 'madeinviet') {
+    return 'Champion en S8, relégué en S9. Le champion déchu veut sa revanche.'
+  }
+  if (key === 'deepblue') {
+    return "Yo-yo perpétuel entre L1 et L2. La régularité n'est pas son fort."
+  }
+  if (palmares.l1Titles >= 2) {
+    return `${palmares.l1Titles} titres L1 au compteur : une domination qui pèse sur toute la ligue.`
+  }
+  if (palmares.relegations >= 2) {
+    return `${palmares.relegations} relégations en L1 : une trajectoire faite de hauts et de bas.`
+  }
+  return `${teamName} construit sa légende, journée après journée.`
+}
+
+/**
+ * Managers de la ligue avec stats **de la dernière journée déjà jouée** (dérivées des matchs
+ * validés, comme le dashboard — cohérent avec `computeStandingsHistoryFromMatches`).
+ */
+export async function getManagersWithStats(
+  seasonId: string,
+  leagueId: string
+): Promise<ManagerCard[]> {
+  const managers = await getManagers(leagueId, seasonId)
+  const bundle = await getMatchResults(seasonId)
+  const { rows: matchResults, error: loadError } = bundle
+
+  const lastByManager = new Map<string, StandingsHistoryWithManager>()
+
+  if (!loadError && matchResults.length > 0) {
+    const { issues, validRows } = validateSeasonMatchResults(managers, matchResults)
+    if (issues.length === 0 && validRows.length > 0) {
+      const standings = computeStandingsHistoryFromMatches(seasonId, managers, validRows)
+      const lastMd = maxMatchdayFromMatches(validRows)
+      if (lastMd > 0) {
+        for (const r of standings) {
+          if (r.matchday_number === lastMd) {
+            lastByManager.set(r.manager_id, r)
+          }
+        }
+      }
+    }
+  }
+
+  return managers.map((m) => {
+    const teamName = m.team?.name ?? m.name
+    const row = lastByManager.get(m.id)
+    const palmares = getPalmarèsCountsForTeam(teamName)
+    const { league: currentLeague, matchedRoster } = resolveSeason10RosterTeamDivision(teamName)
+    if (!matchedRoster) {
+      console.warn(
+        `[Managers] Aucune entrée roster Saison 10 pour l’équipe « ${teamName} » — L1/L2 peut être incorrect.`
+      )
+    }
+    return {
+      id: m.id,
+      name: m.name,
+      teamName,
+      currentLeague,
+      rank: row?.rank ?? null,
+      points: row?.points ?? null,
+      goalsFor: row?.goals_for ?? null,
+      goalsAgainst: row?.goals_against ?? null,
+      matchesPlayed: row?.matches_played ?? null,
+      form: row?.form ?? null,
+      winStreak: row?.win_streak ?? 0,
+      loseStreak: row?.lose_streak ?? 0,
+      loreTag: getLoreForCoach(teamName),
+      loreDescription: buildManagerLoreDescription(teamName, palmares),
+      palmares,
+    }
+  })
+}
+
+/** Slugs Supabase des deux divisions JAKATTAK (page `/managers` multiligue). */
+const ALL_MANAGERS_LEAGUE_SLUGS = ['jakattak_ligue1', 'jakattak_ligue2'] as const
+
+/**
+ * Tous les managers L1 + L2 : stats par ligue (saison courante de chaque slug),
+ * `currentLeague` issu de `resolveSeason10RosterTeamDivision` / `CURRENT_SEASON_10_ROSTERS` (`league-lore`).
+ * Tri : L1 d’abord par rang, puis L2 par rang ; rangs absents en dernier dans chaque groupe.
+ */
+export async function getAllManagersWithStats(): Promise<ManagerCard[]> {
+  const chunks = await Promise.all(
+    ALL_MANAGERS_LEAGUE_SLUGS.map(async (slug) => {
+      const league = await getLeagueBySlug(slug)
+      if (!league) return [] as ManagerCard[]
+      const season = await getCurrentSeason(league.id)
+      if (!season) return [] as ManagerCard[]
+      return getManagersWithStats(season.id, league.id)
+    })
+  )
+
+  const merged = chunks.flat()
+  merged.sort((a, b) => {
+    if (a.currentLeague !== b.currentLeague) {
+      return a.currentLeague === 'L1' ? -1 : 1
+    }
+    const ra = a.rank
+    const rb = b.rank
+    if (ra === null && rb === null) return 0
+    if (ra === null) return 1
+    if (rb === null) return -1
+    return ra - rb
+  })
+
+  return merged
 }
 
 /**

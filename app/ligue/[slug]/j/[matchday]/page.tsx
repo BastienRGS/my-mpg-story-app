@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import type { Metadata } from "next"
+import type { CSSProperties, ReactNode } from "react"
+import { headers } from "next/headers"
 import { getMatchdayEpisodePageData } from "@/lib/queries"
 import {
   computeManagerOfWeekForMatchday,
@@ -13,28 +15,31 @@ import {
   getScorelineLoreCaption,
   goldenRoostersWonAny,
 } from "@/lib/league-lore"
-import { LeagueStoryKpiCard, LeagueStoryKpiGrid } from "@/components/sections/LeagueStoryKpiGrid"
-import StandingsEvolutionChart from "@/components/charts/StandingsEvolutionChart"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { AlertCircle, ChevronLeft, ChevronRight, Info, Quote } from "lucide-react"
+  buildMastheadHeadline,
+  buildMastheadSubheadKicker,
+  seasonHeaderLabelFromSeasonName,
+} from "@/lib/matchday-newspaper"
+import StandingsEvolutionChart from "@/components/charts/StandingsEvolutionChart"
+import { createClient } from "@/lib/supabase/server"
+import { ShareButton } from "@/components/matchday/ShareButton"
+import { AlertCircle, Info } from "lucide-react"
+import type { LeagueStoryKpi } from "@/lib/league-story-kpis"
 import type { ManagerWithTeam, StandingsHistoryWithManager } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-/** Évite un HTML mis en cache (CDN / Next) qui masquerait les changements de mise en page. */
 export const dynamic = "force-dynamic"
 
-type PageProps = {
-  params: Promise<{ slug: string; matchday: string }>
-}
+const NEWSPAPER_VARS: CSSProperties = {
+  ["--color-bg" as string]: "#0a0a0a",
+  ["--color-surface" as string]: "#141414",
+  ["--color-accent" as string]: "#FFE000",
+  ["--color-alert" as string]: "#E8000D",
+  ["--color-text" as string]: "#ffffff",
+  ["--color-muted" as string]: "#888888",
+} as const
+
+type PageProps = { params: Promise<{ slug: string; matchday: string }> }
 
 function labelManager(m: ManagerWithTeam): string {
   return m.team?.name || m.name
@@ -64,38 +69,56 @@ function episodeNavTargets(
   }
 }
 
-function MatchdayEpisodeNav({
-  leagueSlug,
-  prevNum,
-  nextNum,
-}: {
-  leagueSlug: string
-  prevNum: number | null
-  nextNum: number | null
-}) {
-  const safeSlug = encodeURIComponent(leagueSlug)
-  const btnClass =
-    "inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-input bg-background px-2.5 text-sm font-medium tabular-nums shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:px-3"
-
-  if (prevNum == null && nextNum == null) {
-    return null
-  }
-
+function SectionKicker({ children, id }: { children: ReactNode; id?: string }) {
   return (
-    <nav aria-label="Journée précédente ou suivante" className="flex flex-wrap items-center gap-2">
-      {prevNum != null ? (
-        <Link href={`/ligue/${safeSlug}/j/${prevNum}`} className={btnClass}>
-          <ChevronLeft className="h-4 w-4" aria-hidden />
-          <span>J{prevNum}</span>
-        </Link>
-      ) : null}
-      {nextNum != null ? (
-        <Link href={`/ligue/${safeSlug}/j/${nextNum}`} className={btnClass}>
-          <span>J{nextNum}</span>
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </Link>
-      ) : null}
-    </nav>
+    <h2
+      id={id}
+      className="border-l-4 pl-3 text-xs font-extrabold uppercase tracking-[0.22em] text-[#FFE000]"
+      style={{ borderColor: "#FFE000" }}
+    >
+      {children}
+    </h2>
+  )
+}
+
+function MatchdayKpiBlock({ kpi }: { kpi: LeagueStoryKpi }) {
+  const isMotw = kpi.slug === "match_of_round"
+  const mainLine = isMotw ? kpi.managerName : kpi.teamLabel || kpi.managerName
+  const subLine = isMotw
+    ? kpi.teamLabel
+    : kpi.teamLabel && kpi.managerName && kpi.managerName !== kpi.teamLabel
+      ? kpi.managerName
+      : null
+  return (
+    <article
+      className="flex min-h-0 flex-col border border-white/5 bg-[#141414] pl-[3px]"
+      style={{ borderLeft: "3px solid #FFE000" }}
+    >
+      <div className="p-4 sm:p-5">
+        <p className="text-[0.65rem] font-extrabold uppercase tracking-[0.2em] text-[#888]">{kpi.title}</p>
+        <p
+          className="mt-2 min-w-0 break-words text-2xl font-black uppercase leading-tight text-white"
+          style={{ fontSize: "1.5rem" }}
+        >
+          {mainLine}
+        </p>
+        {subLine ? (
+        <p className="mt-1 min-w-0 break-words text-sm font-medium text-zinc-400">
+          {subLine}
+        </p>
+        ) : null}
+        {kpi.hasData ? (
+          <p className="mt-3 text-[0.85rem] leading-[1.5] text-zinc-300">
+            {kpi.detail}
+          </p>
+        ) : (
+          <p className="mt-3 text-[0.85rem] leading-[1.5] text-zinc-500">Pas encore assez de données.</p>
+        )}
+        {kpi.loreSubtitle ? (
+          <p className="mt-2 text-xs italic text-[#FFE000] sm:text-sm">{kpi.loreSubtitle}</p>
+        ) : null}
+      </div>
+    </article>
   )
 }
 
@@ -128,6 +151,12 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
     notFound()
   }
 
+  const h = await headers()
+  const host = h.get("x-forwarded-host") ?? h.get("host")
+  const proto = h.get("x-forwarded-proto") ?? "https"
+  const siteBase = host ? `${proto}://${host}` : ""
+  const shareUrl = `${siteBase}/ligue/${encodeURIComponent(slug)}/j/${matchdayNumber}`
+
   const {
     league,
     season,
@@ -138,6 +167,15 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
     validatedMatchRows,
     standingsHistory,
   } = data
+
+  const supabase = await createClient()
+  const { data: auth } = await supabase.auth.getUser()
+  const userEmail = auth.user?.email
+  const highlightManagerId: string | null = userEmail
+    ? (managers.find(
+        (m) => m.identity_label && m.identity_label.toLowerCase() === userEmail.toLowerCase()
+      )?.id ?? null)
+    : null
 
   const { prevNum: episodePrevNum, nextNum: episodeNextNum } = episodeNavTargets(
     navMatchdayNumbers,
@@ -213,6 +251,14 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
     return (b.points ?? 0) - (a.points ?? 0)
   })
 
+  const nTeams = sortedAfter.length
+  const rowTextClass = (rank: number) => {
+    if (nTeams <= 1) return "text-[#FFE000]"
+    if (rank <= 2) return "text-[#FFE000]"
+    if (rank > nTeams - 2) return "text-[#E8000D]"
+    return "text-zinc-100"
+  }
+
   const loreScoreRows = matchesForMatchday
     .filter((m) => m.home_score != null && m.away_score != null)
     .map((m) => ({
@@ -222,302 +268,342 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
       awayScore: m.away_score!,
     }))
   const mafiaTicker = goldenRoostersWonAny(loreScoreRows)
-  const loreHooksForDay = [
-    ...new Set(
-      matchesForMatchday
-        .map((m) =>
-          getLoreForMatch(
-            labelTeamId(managers, m.home_team_id),
-            labelTeamId(managers, m.away_team_id)
-          )
-        )
-        .filter((h): h is string => Boolean(h))
-    ),
-  ]
+
+  const perMatchLore = matchesForMatchday
+    .map((m) => {
+      const homeL = labelTeamId(managers, m.home_team_id)
+      const awayL = labelTeamId(managers, m.away_team_id)
+      const h = getLoreForMatch(homeL, awayL)
+      return h ? { id: m.id, hook: h, home: homeL, away: awayL } : null
+    })
+    .filter((x): x is { id: string; hook: string; home: string; away: string } => x !== null)
 
   const heroTitle = matchday.title?.trim() || `Journée ${matchdayNumber}`
-  const heroSubtitle = `${league.name} · ${season.name} · ${matchdayStatusLabel(matchday.status)}`
+  const kicker = buildMastheadSubheadKicker({ managerOfWeek, matchOfWeek, storyKpis })
+  const mainHead = buildMastheadHeadline(punchline, summaryText, ready, heroTitle)
+  const seasonRow = seasonHeaderLabelFromSeasonName(season.name, matchdayNumber)
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-3xl space-y-8 px-4 py-6 sm:space-y-10 sm:px-6 sm:py-8 lg:max-w-5xl lg:px-8">
-        <nav aria-label="Fil d’Ariane">
+    <div
+      className="min-h-screen overflow-x-hidden bg-[#0a0a0a] text-white antialiased"
+      style={NEWSPAPER_VARS}
+    >
+      <div className="mx-auto max-w-4xl px-3 py-4 sm:px-5 sm:py-6">
+        <nav
+          className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          aria-label="Accès ligue"
+        >
           <Link
             href={`/ligue/${encodeURIComponent(league.slug)}`}
-            className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="inline-flex min-h-12 w-fit items-center text-xs font-mono font-medium uppercase tracking-widest text-[#888] underline-offset-2 hover:underline"
           >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-            Retour au tableau de bord
+            ← Tableau
+          </Link>
+          <Link
+            href="/admin/match-results"
+            className="inline-flex min-h-10 w-fit max-w-full items-center justify-center border border-[#FFE000]/30 px-3 py-2 text-[0.6rem] font-mono font-semibold uppercase tracking-widest text-[#FFE000] transition hover:bg-[#FFE000]/10"
+          >
+            Saisie admin / punchline
           </Link>
         </nav>
 
         {data.matchDataStatus === "load_error" || data.matchDataStatus === "invalid" ? (
-          <Alert variant={data.matchDataStatus === "load_error" ? "destructive" : "default"}>
-            <AlertCircle className="h-4 w-4" aria-hidden />
-            <AlertTitle>
-              {data.matchDataStatus === "load_error"
-                ? "Impossible de charger les résultats"
-                : "Données invalides"}
-            </AlertTitle>
-            <AlertDescription>
-              <ul className="list-disc space-y-1 pl-4 text-sm">
-                {data.matchDataIssues.map((msg, i) => (
-                  <li key={i}>{msg}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
+          <div className="mb-8 space-y-2 border border-red-600/30 bg-red-950/20 p-4 text-sm text-zinc-100">
+            <p className="flex items-center gap-2 font-extrabold uppercase tracking-wide text-red-500">
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
+              {data.matchDataStatus === "load_error" ? "Impossible de charger" : "Données invalides"}
+            </p>
+            <ul className="list-inside list-disc space-y-1 text-zinc-300">
+              {data.matchDataIssues.map((msg, i) => (
+                <li key={i}>{msg}</li>
+              ))}
+            </ul>
+          </div>
         ) : null}
 
         {data.matchDataStatus === "empty" ? (
-          <Alert>
-            <Info className="h-4 w-4" aria-hidden />
-            <AlertTitle>Aucun résultat pour cette saison</AlertTitle>
-            <AlertDescription className="text-sm">
-              Les blocs narratifs et le classement s’afficheront dès que des matchs seront saisis pour cette
-              saison.
-            </AlertDescription>
-          </Alert>
+          <div className="mb-8 space-y-2 border border-amber-500/30 bg-amber-950/10 p-4 text-sm text-zinc-200">
+            <p className="font-bold text-amber-400">Aucun résultat pour cette saison</p>
+            <p className="flex items-start gap-2 text-zinc-400">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              Saisissez des matchs pour alimenter la une.
+            </p>
+          </div>
         ) : null}
 
-        {/* 1. Hero : titre + sous-titre + résumé */}
-        <header className="space-y-4 border-b border-border/60 pb-8">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Épisode</p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-            <h1 className="min-w-0 flex-1 text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              {heroTitle}
-            </h1>
-            <MatchdayEpisodeNav
-              leagueSlug={league.slug}
-              prevNum={episodePrevNum}
-              nextNum={episodeNextNum}
-            />
+        {/* 1. Masthead */}
+        <header className="space-y-0 pb-8">
+          <div className="flex min-h-6 flex-col justify-between gap-1 font-mono text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.2em] text-[#666] sm:flex-row sm:items-baseline sm:gap-2">
+            <span className="break-words text-[#888]">{(league.name || "JAKATTAK").toUpperCase()} MULTILIGUE</span>
+            <span className="shrink-0 self-end sm:self-auto">{seasonRow}</span>
           </div>
-          <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">{heroSubtitle}</p>
+          <div
+            className="mt-3 w-full"
+            style={{ height: 1, background: "#FFE000" }}
+            aria-hidden
+          />
           {standingsBefore.length > 0 && standingsAfter.length > 0 ? (
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              Classement comparé : après la J{prevMatchdayNumber} → après la J{matchdayNumber}.
+            <p className="mt-3 text-[0.6rem] font-mono text-[#666]">
+              Classt. : J{prevMatchdayNumber} → J{matchdayNumber} · {matchdayStatusLabel(matchday.status)}
             </p>
           ) : null}
-          <p className="text-pretty border-t border-border/60 pt-4 text-sm leading-relaxed text-foreground sm:text-base">
-            {summaryText}
+
+          <h1
+            className="mt-4 w-full min-w-0 break-words font-black uppercase leading-[0.95] text-[#FFE000]"
+            style={{ fontSize: "clamp(2rem, 8vw, 5rem)" }}
+          >
+            {mainHead.toLocaleUpperCase("fr-FR")}
+          </h1>
+          {ready && rowsForDay.length > 0 ? (
+            <p className="mt-2 font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+              J{matchdayNumber} : {rowsForDay.length} rencontre{rowsForDay.length > 1 ? "s" : ""} ·{" "}
+              {rowsForDay.reduce((s, r) => s + r.home_score + r.away_score, 0)} buts
+            </p>
+          ) : null}
+          <p className="mt-2 text-sm leading-tight text-zinc-200 sm:text-base">
+            {kicker.toLocaleUpperCase("fr-FR")}
           </p>
         </header>
 
-        {/* 2. La synthèse (cartes stats : manager + match + chiffré) */}
-        <section className="space-y-4" aria-labelledby="synthesis-heading">
-          <h2 id="synthesis-heading" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            La synthèse
-          </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-            <LeagueStoryKpiCard kpi={managerOfWeek} />
-            <LeagueStoryKpiCard kpi={matchOfWeek} />
-            <Card className="border-border bg-card shadow-none sm:col-span-2 lg:col-span-1">
-              <CardContent className="flex flex-col justify-center gap-1 p-4 sm:p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  J{matchdayNumber} en chiffres
-                </p>
-                <p className="text-2xl font-bold tabular-nums text-foreground">{rowsForDay.length}</p>
-                <p className="text-xs text-muted-foreground">rencontre{rowsForDay.length > 1 ? "s" : ""}</p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-foreground">
-                  {rowsForDay.reduce((s, r) => s + r.home_score + r.away_score, 0)}
-                </p>
-                <p className="text-xs text-muted-foreground">buts marqués</p>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        {/* 3. Punchline */}
-        {punchline ? (
-          <section className="space-y-3" aria-labelledby="punchline-heading">
-            <h2 id="punchline-heading" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-              Punchline
-            </h2>
-            <Card className="border-primary/20 bg-primary/5 shadow-none">
-              <CardContent className="flex gap-3 p-4 sm:gap-4 sm:p-5">
-                <Quote className="mt-0.5 h-5 w-5 shrink-0 text-primary/70" aria-hidden />
-                <p className="text-pretty text-sm font-medium leading-relaxed text-foreground sm:text-base">
-                  {punchline}
-                </p>
-              </CardContent>
-            </Card>
-          </section>
-        ) : null}
-
-        {/* 4. Le choc de la J… (scores du jour) */}
-        <section className="space-y-3" aria-labelledby="choc-heading">
-          <h2 id="choc-heading" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            Le choc de la J{matchdayNumber}
-          </h2>
-          {mafiaTicker ? (
-            <div
-              className="relative overflow-hidden rounded-md border border-amber-600/35 bg-amber-500/15 dark:bg-amber-950/40"
-              role="status"
-              aria-live="polite"
-            >
-              <div className="flex min-h-9 items-center justify-center gap-2 px-3 py-2 sm:px-4">
-                <span className="shrink-0 rounded-sm bg-amber-600/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white dark:bg-amber-500 dark:text-amber-950">
-                  Flash
-                </span>
-                <p className="text-center text-xs font-semibold uppercase tracking-wide text-amber-950 dark:text-amber-100 sm:text-sm">
-                  La Mafia Rolandèse valide — la dynastie a encore frappé sur cette journée.
+        {data.matchDataStatus === "ready" && matchesForMatchday.length > 0 ? (
+          <>
+            {mafiaTicker ? (
+              <div
+                className="mb-5 flex min-h-12 w-full items-center justify-center border border-[#E8000D]/30 bg-[#E8000D] px-2 text-center"
+                role="status"
+                aria-live="polite"
+              >
+                <p className="text-balance break-words px-2 text-xs font-black uppercase tracking-wide text-white sm:text-sm">
+                  🚨 LA MAFIA ROLANDÈSE VALIDE — JOURNÉE {matchdayNumber}
                 </p>
               </div>
-            </div>
-          ) : null}
-          {matchesForMatchday.length > 0 ? (
-            <Card className="border-border bg-card shadow-none">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Tous les scores</CardTitle>
-                <CardDescription>Résultats enregistrés pour cette journée.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+            ) : null}
+
+            {/* 2. Scores */}
+            <section className="space-y-3 pb-10" aria-labelledby="scores-heading">
+              <SectionKicker id="scores-heading">Les scores</SectionKicker>
+              <div>
                 {matchesForMatchday.map((m) => {
-                  const homeLabel = labelTeamId(managers, m.home_team_id)
-                  const awayLabel = labelTeamId(managers, m.away_team_id)
+                  const homeL = labelTeamId(managers, m.home_team_id)
+                  const awayL = labelTeamId(managers, m.away_team_id)
                   const hs = m.home_score
-                  const awaySc = m.away_score
+                  const asco = m.away_score
                   const caption =
-                    hs != null && awaySc != null
-                      ? getScorelineLoreCaption(homeLabel, awayLabel, hs, awaySc)
+                    hs != null && asco != null
+                      ? getScorelineLoreCaption(homeL, awayL, hs, asco)
                       : null
+                  const total = hs != null && asco != null ? hs + asco : 0
+                  const highScoring = total >= 6
                   return (
                     <div
                       key={m.id}
-                      className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2"
+                      className="border-b border-white/[0.12] py-3 last:border-b-0"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-medium text-foreground">
-                          {homeLabel} — {awayLabel}
-                        </span>
-                        <span className="tabular-nums text-muted-foreground">
-                          {m.home_score ?? "—"} – {m.away_score ?? "—"}
-                        </span>
+                      <div
+                        className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-x-2 text-sm sm:text-base"
+                        style={{ minHeight: 44 }}
+                      >
+                        <p className="min-w-0 self-center break-words pr-1 text-left font-extrabold uppercase leading-tight text-white sm:text-sm">
+                          {homeL}
+                        </p>
+                        <div className="flex min-w-0 flex-col items-center justify-center self-center text-center">
+                          <span
+                            className={cn(
+                              "tabular-nums text-white",
+                              highScoring ? "text-[#FFE000]" : ""
+                            )}
+                            style={{ fontSize: "1.5rem", lineHeight: 1.1, fontWeight: 800 }}
+                          >
+                            {hs != null && asco != null ? (
+                              `${hs} – ${asco}`
+                            ) : (
+                              <span className="text-2xl text-zinc-500">—</span>
+                            )}
+                          </span>
+                        </div>
+                        <p className="min-w-0 self-center break-words pl-1 text-right font-extrabold uppercase leading-tight text-white sm:text-sm">
+                          {awayL}
+                        </p>
                       </div>
                       {caption ? (
-                        <p className="mt-1.5 text-pretty text-xs italic leading-relaxed text-muted-foreground sm:text-sm">
+                        <p className="mt-1.5 text-pretty break-words text-xs italic sm:text-sm" style={{ color: "#E8000D" }}>
                           {caption}
                         </p>
                       ) : null}
                     </div>
                   )
                 })}
-              </CardContent>
-            </Card>
-          ) : (
-            <p className="text-sm text-muted-foreground">Aucun score saisi pour cette journée.</p>
-          )}
-
-          {matchesForMatchday.length > 0 ? (
-            <section className="space-y-2" aria-labelledby="lore-context-heading">
-              <h3
-                id="lore-context-heading"
-                className="text-base font-semibold tracking-tight text-foreground"
-              >
-                Contexte historique
-              </h3>
-              <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-                Neuf saisons de hauts et de bas : certaines affiches réveillent des histoires plus vieilles que le
-                classement du moment.
-              </p>
-              {loreHooksForDay.length > 0 ? (
-                <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-foreground">
-                  {loreHooksForDay.map((hook, i) => (
-                    <li key={i} className="text-pretty italic text-muted-foreground">
-                      {hook}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm italic text-muted-foreground">
-                  Aucune rivalité « scriptée » pour ces duels — le lore garde le silence, pour l’instant.
-                </p>
-              )}
+              </div>
             </section>
-          ) : null}
-        </section>
+          </>
+        ) : data.matchDataStatus === "ready" && matchesForMatchday.length === 0 ? (
+          <p className="pb-8 text-sm text-zinc-500">Aucun score saisi.</p>
+        ) : null}
 
-        {/* 5. Les grands récits */}
-        <LeagueStoryKpiGrid
-          kpis={storyKpis}
-          sectionTitle="Les grands récits"
-          sectionDescription="Indicateurs narratifs calculés sur la saison à partir de cette journée."
-          compact
-        />
-
-        {/* 6. La bataille pour le titre */}
-        <section className="space-y-3" aria-labelledby="chart-heading">
-          <h2 id="chart-heading" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            La bataille pour le titre
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Jusqu’à la J{matchdayNumber} incluse — comparez jusqu’à 4 managers.
-          </p>
-          <StandingsEvolutionChart standings={chartStandings} managers={chartManagers} leagueId={league.id} />
-        </section>
-
-        {/* 7. Classement */}
-        <section className="space-y-3 pb-8" aria-labelledby="table-heading">
-          <h2 id="table-heading" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            Classement
-          </h2>
-          <p className="text-sm text-muted-foreground">Après la J{matchdayNumber}.</p>
-          {sortedAfter.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Pas encore de ligne de classement pour cette journée (résultats manquants ou en cours de
-              validation).
+        {/* 3. KPIs */}
+        {data.matchDataStatus === "ready" && (
+          <section className="space-y-3 pb-10" aria-labelledby="kpi-heading">
+            <SectionKicker id="kpi-heading">Les grands récits</SectionKicker>
+            <p className="text-xs text-zinc-500 sm:text-sm">
+              Indicateurs narratifs sur la dynamique de saison (jusqu’à la dernière J disponible en données).
             </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Équipe</TableHead>
-                  <TableHead className="text-right">Pts</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">BP</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">BC</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">Forme</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedAfter.map((row) => {
-                  const mgr = managers.find((m) => m.id === row.manager_id)
-                  return (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-semibold tabular-nums">{row.rank}</TableCell>
-                      <TableCell className="font-medium">{mgr ? labelManager(mgr) : "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{row.points ?? 0}</TableCell>
-                      <TableCell className="text-right tabular-nums hidden sm:table-cell">
-                        {row.goals_for ?? 0}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums hidden sm:table-cell">
-                        {row.goals_against ?? 0}
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "text-right text-xs text-muted-foreground hidden md:table-cell tracking-wider"
-                        )}
-                      >
-                        {row.form ?? "—"}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </section>
-
-        {(episodePrevNum != null || episodeNextNum != null) && (
-          <footer className="border-t border-border/60 pt-8 pb-4">
-            <MatchdayEpisodeNav
-              leagueSlug={league.slug}
-              prevNum={episodePrevNum}
-              nextNum={episodeNextNum}
-            />
-          </footer>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {storyKpis.map((kpi) => (
+                <MatchdayKpiBlock kpi={kpi} key={kpi.slug} />
+              ))}
+            </div>
+          </section>
         )}
+
+        {data.matchDataStatus === "ready" && perMatchLore.length > 0 && (
+          <section className="space-y-3 pb-10" aria-labelledby="archives-heading">
+            <SectionKicker id="archives-heading">Archives & contexte</SectionKicker>
+            <ul className="space-y-4">
+              {perMatchLore.map((item) => (
+                <li
+                  key={item.id}
+                  className="border-l-[3px] pl-3 sm:pl-4"
+                  style={{ borderColor: "#E8000D" }}
+                >
+                  <blockquote>
+                    <p className="text-pretty break-words text-sm italic text-zinc-100 sm:text-base">
+                      {item.hook}
+                    </p>
+                    <p className="mt-1 font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                      Rivalité — {item.home} / {item.away} · {league.name}
+                    </p>
+                  </blockquote>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Courbe (fonctionnelle existante) */}
+        {data.matchDataStatus === "ready" && (
+          <section className="space-y-3 pb-10" aria-labelledby="courbe-heading">
+            <SectionKicker id="courbe-heading">Courbe du suspens</SectionKicker>
+            <p className="text-xs text-zinc-500 sm:text-sm">Jusqu’à J{matchdayNumber} — jusqu’à 4 courbes par coach.</p>
+            <div className="newspaper-chart-surface overflow-hidden rounded-lg border border-white/10 bg-[#141414] p-0 [&_.text-foreground]:text-zinc-100 [&_.text-muted-foreground]:text-zinc-400 [&_button]:!border-zinc-600">
+              <StandingsEvolutionChart
+                standings={chartStandings}
+                managers={chartManagers}
+                leagueId={league.id}
+                hideHeader
+              />
+            </div>
+          </section>
+        )}
+
+        {/* 5. Classement rapide */}
+        {data.matchDataStatus === "ready" && (
+          <section className="space-y-3 pb-10" aria-labelledby="classement-heading">
+            <SectionKicker id="classement-heading">Classement après J{matchdayNumber}</SectionKicker>
+            {sortedAfter.length === 0 ? (
+              <p className="text-sm text-zinc-500">Pas encore de tableau pour cette J.</p>
+            ) : (
+              <div className="w-full min-w-0 border border-white/8 bg-[#141414] p-0">
+                <table className="w-full table-auto border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="font-mono text-[0.6rem] font-bold uppercase tracking-widest text-zinc-500">
+                      <th className="px-2 py-2 sm:px-3 w-8">#</th>
+                      <th className="px-0 py-2 pr-1">Équipe</th>
+                      <th className="px-1 py-2 text-right tabular-nums">Pts</th>
+                      <th className="hidden px-1 py-2 text-right tabular-nums sm:table-cell w-20">+ / −</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedAfter.map((row) => {
+                      const mgr = managers.find((m) => m.id === row.manager_id)
+                      const name = mgr ? labelManager(mgr) : "—"
+                      const gf = row.goals_for ?? 0
+                      const ga = row.goals_against ?? 0
+                      const diff = gf - ga
+                      const isMine = row.manager_id === highlightManagerId
+                      return (
+                        <tr
+                          key={row.id}
+                          className={cn("border-t border-white/8", rowTextClass(row.rank))}
+                        >
+                          <td
+                            className={cn(
+                              "px-1 py-2.5 pl-0 sm:px-2 sm:pl-0 font-mono text-xs font-bold tabular-nums sm:text-sm",
+                              isMine && "border-l-[3px] border-[#FFE000] pl-2 sm:pl-2"
+                            )}
+                          >
+                            {row.rank}
+                          </td>
+                          <td
+                            className={cn(
+                              "min-w-0 break-words py-2.5 pl-0 pr-1 text-xs font-bold uppercase sm:text-sm"
+                            )}
+                          >
+                            {name}
+                          </td>
+                          <td className="px-1 py-2.5 text-right text-xs font-bold tabular-nums sm:text-sm">
+                            {row.points ?? 0}
+                          </td>
+                          <td
+                            className={cn(
+                              "hidden px-1 py-2.5 text-right text-xs font-mono font-semibold tabular-nums sm:table-cell"
+                            )}
+                          >
+                            {diff >= 0 ? `+${diff}` : String(diff)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 6. Partage + nav */}
+        <div className="space-y-4 border-t border-white/10 pt-6 pb-4">
+          <ShareButton
+            shareUrl={shareUrl}
+            title={`${league.name} — J${matchdayNumber}`}
+          />
+          {episodePrevNum == null && episodeNextNum == null ? null : (
+            <nav
+              className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2"
+              aria-label="Journée précédente ou suivante"
+            >
+              {episodePrevNum != null ? (
+                <Link
+                  className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/15 bg-[#1a1a1a] px-3 text-center text-xs font-black uppercase tracking-wide text-white transition hover:border-[#FFE000]/30 hover:text-[#FFE000]"
+                  href={`/ligue/${encodeURIComponent(league.slug)}/j/${episodePrevNum}`}
+                >
+                  ← Journée {episodePrevNum}
+                </Link>
+              ) : (
+                <span
+                  className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/5 bg-black/20 px-3 text-center text-xs font-black uppercase text-zinc-500"
+                  aria-disabled
+                >
+                  — Début
+                </span>
+              )}
+              {episodeNextNum != null ? (
+                <Link
+                  className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/15 bg-[#1a1a1a] px-3 text-center text-xs font-black uppercase tracking-wide text-white transition hover:border-[#FFE000]/30 hover:text-[#FFE000]"
+                  href={`/ligue/${encodeURIComponent(league.slug)}/j/${episodeNextNum}`}
+                >
+                  Journée {episodeNextNum} →
+                </Link>
+              ) : (
+                <span
+                  className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/5 bg-black/20 px-3 text-center text-xs font-black uppercase text-zinc-500"
+                  aria-disabled
+                >
+                  Fin de saison —
+                </span>
+              )}
+            </nav>
+          )}
+        </div>
       </div>
     </div>
   )
