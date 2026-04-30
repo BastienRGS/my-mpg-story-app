@@ -5,7 +5,7 @@ import { getAllManagersWithStats } from "@/lib/queries"
 import { ManagersPageClient } from "@/components/managers/ManagersPageClient"
 
 export const metadata: Metadata = {
-  title: "Les managers — L1 & L2",
+  title: "Les entraîneurs — L1 & L2",
   description:
     "Trombinoscope de tous les entraîneurs JAKATTAK (Ligue 1 et Ligue 2) : stats, palmarès et lignes narratives.",
 }
@@ -30,7 +30,7 @@ export default async function AllManagersPage() {
         <header className="space-y-2 border-b border-border/60 pb-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Multiligue</p>
           <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            LES MANAGERS
+            LES ENTRAÎNEURS
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             Saison 10 · {total} entraîneur{total !== 1 ? "s" : ""} · L1 &amp; L2

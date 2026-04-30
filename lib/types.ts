@@ -157,6 +157,8 @@ export interface ManagerWithTeam extends Manager {
 export interface ManagerCard {
   id: string
   name: string
+  /** Nom affiché en titre de carte (entraîneur). */
+  coachName: string
   teamName: string
   currentLeague: "L1" | "L2"
   rank: number | null

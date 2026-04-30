@@ -13,10 +13,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params
   const league = await getLeagueBySlug(slug)
   if (!league) {
-    return { title: "Managers" }
+    return { title: "Entraîneurs" }
   }
   return {
-    title: `Les managers — ${league.name}`,
+    title: `Les entraîneurs — ${league.name}`,
     description: `Trombinoscope des entraîneurs de ${league.name} : stats, palmarès et lignes narratives.`,
   }
 }
@@ -52,7 +52,7 @@ export default async function ManagersPage({ params }: PageProps) {
         <header className="space-y-2 border-b border-border/60 pb-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Multiligue</p>
           <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            LES MANAGERS
+            LES ENTRAÎNEURS
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             Saison 10 · {total} entraîneur{total !== 1 ? "s" : ""} · L1 &amp; L2

@@ -231,18 +231,21 @@ export async function getManagersWithStats(
   }
 
   return managers.map((m) => {
-    const teamName = m.team?.name ?? m.name
+    const coachName = m.name
+    const teamName = m.team?.name ?? m.identity_label ?? ""
+    const loreTeamName = m.team?.name ?? m.name
     const row = lastByManager.get(m.id)
-    const palmares = getPalmarèsCountsForTeam(teamName)
-    const { league: currentLeague, matchedRoster } = resolveSeason10RosterTeamDivision(teamName)
+    const palmares = getPalmarèsCountsForTeam(loreTeamName)
+    const { league: currentLeague, matchedRoster } = resolveSeason10RosterTeamDivision(loreTeamName)
     if (!matchedRoster) {
       console.warn(
-        `[Managers] Aucune entrée roster Saison 10 pour l’équipe « ${teamName} » — L1/L2 peut être incorrect.`
+        `[Managers] Aucune entrée roster Saison 10 pour l’équipe « ${loreTeamName} » — L1/L2 peut être incorrect.`
       )
     }
     return {
       id: m.id,
       name: m.name,
+      coachName,
       teamName,
       currentLeague,
       rank: row?.rank ?? null,
@@ -253,8 +256,8 @@ export async function getManagersWithStats(
       form: row?.form ?? null,
       winStreak: row?.win_streak ?? 0,
       loseStreak: row?.lose_streak ?? 0,
-      loreTag: getLoreForCoach(teamName),
-      loreDescription: buildManagerLoreDescription(teamName, palmares),
+      loreTag: getLoreForCoach(loreTeamName),
+      loreDescription: buildManagerLoreDescription(loreTeamName, palmares),
       palmares,
     }
   })

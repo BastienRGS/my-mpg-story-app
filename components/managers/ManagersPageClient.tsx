@@ -31,7 +31,7 @@ export function ManagersPageClient({ managers }: { managers: ManagerCardModel[] 
 
       <ul
         className="grid grid-cols-2 items-stretch gap-3 md:grid-cols-3 lg:grid-cols-4"
-        aria-label="Grille des managers"
+        aria-label="Grille des entraîneurs"
       >
         {filtered.map((m) => (
           <li key={m.id} className="flex min-h-0">
