@@ -158,6 +158,29 @@ export function normalizeTeamName(raw: string): string {
   return s.trim()
 }
 
+/**
+ * Chaîne déjà passée par {@link normalizeTeamName} : correspond aux `identity_label`
+ * Supabase exacts (casse/accents neutralisés, variantes fusionnées).
+ */
+const NORMALIZED_IDENTITY_LABEL_TO_TEAM_KEY: Record<string, TeamKey> = {
+  deepblue: "deepblue",
+  "filou fc": "filou_fc",
+  "mat fc": "mat_fc",
+  omt: "omt",
+  plr: "plr",
+  madeinviet: "madeinviet",
+  "celtic gossbo": "celtic_gossbo",
+  "rocket team": "rocket_team",
+  "fc goudal": "fc_goudal",
+  "red star": "red_star",
+  "olympik 2 marseille": "olympik_2_marseille",
+  jpp: "jpp",
+  souvlaki: "souvlaki",
+  jakattak: "jakattak",
+  "bab olympique": "bab_olympique",
+  "golden roosters": "golden_roosters",
+}
+
 export type TeamKey =
   | "jakattak"
   | "golden_roosters"
@@ -170,7 +193,11 @@ export type TeamKey =
   | "fc_goudal"
   | "red_star"
   | "plr"
-  | "olympik2"
+  | "olympik_2_marseille"
+  | "filou_fc"
+  | "rocket_team"
+  | "jpp"
+  | "souvlaki"
 
 const TEAM_RESOLVERS: { key: TeamKey; needles: string[] }[] = [
   { key: "golden_roosters", needles: ["golden roosters", "goldenroosters"] },
@@ -178,16 +205,22 @@ const TEAM_RESOLVERS: { key: TeamKey; needles: string[] }[] = [
   { key: "bab_olympique", needles: ["bab olympique", "babolympique"] },
   { key: "madeinviet", needles: ["madeinviet", "madinviet"] },
   { key: "celtic_gossbo", needles: ["celtic gossbo", "celticgossbo"] },
-  { key: "olympik2", needles: ["olympik 2 marseille", "olympique 2 marseille"] },
+  { key: "olympik_2_marseille", needles: ["olympik 2 marseille", "olympique 2 marseille"] },
   { key: "mat_fc", needles: ["mat fc", "matfc"] },
   { key: "fc_goudal", needles: ["fc goudal", "fcgoudal"] },
   { key: "red_star", needles: ["red star", "redstar"] },
   { key: "deepblue", needles: ["deepblue", "deep blue"] },
+  { key: "filou_fc", needles: ["filou fc", "filoufc"] },
+  { key: "rocket_team", needles: ["rocket team", "rocketteam"] },
+  { key: "jpp", needles: ["jpp"] },
+  { key: "souvlaki", needles: ["souvlaki"] },
 ]
 
 /** Résout une équipe vers une clé canonique (lore, palmarès, rivalités). */
 export function resolveTeamKey(name: string): TeamKey | null {
   const n = normalizeTeamName(name)
+  const fromIdentity = NORMALIZED_IDENTITY_LABEL_TO_TEAM_KEY[n]
+  if (fromIdentity) return fromIdentity
   for (const { key, needles } of TEAM_RESOLVERS) {
     for (const needle of needles) {
       if (n === needle || n.includes(needle)) return key
@@ -240,11 +273,15 @@ const SEASON_10_TEAM_KEY_DIVISION: Partial<Record<TeamKey, "L1" | "L2">> = {
   mat_fc: "L1",
   celtic_gossbo: "L1",
   golden_roosters: "L1",
-  olympik2: "L1",
+  olympik_2_marseille: "L1",
   deepblue: "L2",
   bab_olympique: "L2",
   madeinviet: "L2",
   plr: "L2",
+  filou_fc: "L2",
+  rocket_team: "L2",
+  jpp: "L2",
+  souvlaki: "L2",
 }
 
 function buildSeason10NormalizedRosterSets(): {

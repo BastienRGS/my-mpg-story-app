@@ -232,8 +232,9 @@ export async function getManagersWithStats(
 
   return managers.map((m) => {
     const coachName = m.name
-    const teamName = m.team?.name ?? m.identity_label ?? ""
-    const loreTeamName = m.team?.name ?? m.name
+    const teamName = (m.identity_label ?? '').trim()
+    const loreTeamName =
+      teamName.length > 0 ? teamName : (m.team?.name ?? '').trim()
     const row = lastByManager.get(m.id)
     const palmares = getPalmarèsCountsForTeam(loreTeamName)
     const { league: currentLeague, matchedRoster } = resolveSeason10RosterTeamDivision(loreTeamName)
