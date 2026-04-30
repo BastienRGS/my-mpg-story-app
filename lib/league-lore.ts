@@ -82,7 +82,7 @@ export const PALMARES: PalmarèsEntry[] = [
 export const RIVALRIES_AND_LORE = {
   MAFIA_ROLANDESE: {
     summary:
-      "Jakattak a fondé la ligue (toujours coach actif). Golden Roosters est dirigé par son frère. Cinq titres L1 (S3, S5, S6, S7, S9). Victoire des Roosters : la Mafia Rolandèse ; défaite : anomalie rare.",
+      "Jakattak a fondé la ligue (toujours coach actif). Golden Roosters est Jakattak sont supsonnés d'influencer le jeu. Et comme par hasard ils sont souvent sur le podium de le ligue 1. Golden Roosters a gagné Cinq titres L1 (S3, S5, S6, S7, S9). Victoire des Roosters : super champion ; défaite : anomalie rare.",
   },
   BAB_OLYMPIQUE_LEGEND: {
     summary:

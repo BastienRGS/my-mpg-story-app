@@ -49,7 +49,7 @@ export default async function AdminMatchResultsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-4xl space-y-8 px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
         <header className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Admin · workflow hebdomadaire
@@ -58,13 +58,6 @@ export default async function AdminMatchResultsPage() {
             <ClipboardList className="h-7 w-7 shrink-0 text-primary" aria-hidden />
             Saisie des résultats
           </h1>
-          <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Après chaque journée : saisir tous les matchs d’un coup (grille) — une ligne par rencontre dans{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matches</code> (via{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matchday_id</code> →{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matchdays</code>). Le classement et
-            les KPIs sont recalculés automatiquement.
-          </p>
         </header>
 
         {formEnabled ? (
@@ -74,7 +67,7 @@ export default async function AdminMatchResultsPage() {
               <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
                 <li>Noter les scores de la journée.</li>
                 <li>
-                  Les insérer dans <strong className="text-foreground">matches</strong> (formulaire ci-dessous
+                  Les insérer dans <strong className="text-foreground">matches</strong> (formulaire ci-dessus
                   ou éditeur Supabase — détail dans{" "}
                   <code className="rounded bg-muted px-1">docs/WEEKLY_WORKFLOW.md</code>).
                 </li>
@@ -132,6 +125,16 @@ export default async function AdminMatchResultsPage() {
             </div>
           </>
         )}
+
+        {formEnabled ? (
+          <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Après chaque journée : saisir tous les matchs d’un coup (grille) — une ligne par rencontre dans{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matches</code> (via{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matchday_id</code> →{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">matchdays</code>). Le classement et les
+            KPIs sont recalculés automatiquement.
+          </p>
+        ) : null}
       </div>
     </div>
   )

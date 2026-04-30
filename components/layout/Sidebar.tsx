@@ -45,7 +45,7 @@ type NavItemConfig =
 
 const navItems: NavItemConfig[] = [
   { id: "dashboard", label: "Tableau de bord", icon: "LayoutDashboard", kind: "link", route: "dashboard" },
-  { id: "managers", label: "Managers", icon: "Users", kind: "link", route: "managers" },
+  { id: "managers", label: "Les entraîneurs", icon: "Users", kind: "link", route: "managers" },
   { id: "trophees", label: "Trophées", icon: "Award", kind: "soon" },
   { id: "historique", label: "Historique", icon: "History", kind: "link", route: "historique" },
 ]

@@ -29,7 +29,7 @@ export function AdminMatchWorkspace({
   }, [leagueOptions, leagueSlug])
 
   return (
-    <>
+    <div className="space-y-4">
       <section className="rounded-xl border border-border bg-card/50 p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-foreground">Ligue active</h2>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -72,9 +72,9 @@ export function AdminMatchWorkspace({
         </div>
       </section>
 
-      {children}
-
       <MatchEntryForm leagueOptions={leagueOptions} leagueSlug={leagueSlug} />
-    </>
+
+      {children}
+    </div>
   )
 }
