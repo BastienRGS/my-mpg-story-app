@@ -82,7 +82,7 @@ export const PALMARES: PalmarèsEntry[] = [
 export const RIVALRIES_AND_LORE = {
   MAFIA_ROLANDESE: {
     summary:
-      "Jakattak a fondé la ligue (toujours coach actif). Golden Roosters est Jakattak sont supsonnés d'influencer le jeu. Et comme par hasard ils sont souvent sur le podium de le ligue 1. Golden Roosters a gagné Cinq titres L1 (S3, S5, S6, S7, S9). Victoire des Roosters : super champion ; défaite : anomalie rare.",
+      "Jakattak a fondé la ligue (toujours coach actif). Golden Roosters est Jakattak sont supsonnés d'influencer le jeu; appelé aussi la mafia rolandèse. Et comme par hasard ils sont souvent sur le podium de le ligue 1. Golden Roosters a gagné Cinq titres L1 (S3, S5, S6, S7, S9). Victoire de Golden Roosters : Réelle victoire ou manipulation de la mafia rolandèse ?; défaite : anomalie rare.",
   },
   BAB_OLYMPIQUE_LEGEND: {
     summary:
@@ -320,8 +320,8 @@ export function getLoreForMatch(homeTeam: string, awayTeam: string): string | nu
   const { ha, aw } = pairKeys(homeTeam, awayTeam)
   if (ha && aw && hasKeys(ha, aw, "jakattak", "golden_roosters")) {
     return (
-      "Derby familial — le fondateur affronte la Mafia Rolandèse. Jakattak, créateur de cette ligue, croise le club de son frère : " +
-      "certains crient à la mise en scène, d’autres à un règlement de comptes à la maison."
+      "Derby de frérots — le fondateur affronte sont frère ultra champion. Jakattak, créateur de cette ligue, croise le club de son frère : " +
+      "certains crient à la mise en scène de la mafia rolandèse, d’autres à un règlement de comptes à la maison."
     )
   }
   if (ha && aw && hasKeys(ha, aw, "bab_olympique", "jakattak")) {
@@ -346,14 +346,14 @@ export function getLoreForMatch(homeTeam: string, awayTeam: string): string | nu
 }
 
 const COACH_LORE_TAG: Partial<Record<TeamKey, string>> = {
-  golden_roosters: "Mafia Rolandèse",
+  golden_roosters: "Ultra champion",
   jakattak: "Fondateur en quête de trône",
   bab_olympique: "Légende déchue",
   madeinviet: "Champion déchu",
   deepblue: "Club yo-yo",
   celtic_gossbo: "Le survivant",
   omt: "Rebondisseur",
-  mat_fc: "Dernier outsider sacré",
+  mat_fc: "Outsider régulier",
 }
 
 /** Tag principal pour cartes / sous-titres (une ligne). */
