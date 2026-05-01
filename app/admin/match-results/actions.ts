@@ -90,7 +90,7 @@ async function upsertMatch(
   away_team_id: string,
   home_score: number,
   away_score: number
-): Promise<{ error: string } | { ok: true }> {
+): Promise<{ error: string } | { ok: true; matchId: string }> {
   const { data: existing, error: findErr } = await supabase
     .from("matches")
     .select("id")
@@ -111,19 +111,131 @@ async function upsertMatch(
     if (upErr) {
       return { error: upErr.message }
     }
-    return { ok: true }
+    return { ok: true, matchId: existing.id }
   }
 
-  const { error: insErr } = await supabase.from("matches").insert({
-    matchday_id: matchdayId,
-    home_team_id,
-    away_team_id,
-    home_score,
-    away_score,
-  })
-  if (insErr) {
-    return { error: insErr.message }
+  const { data: inserted, error: insErr } = await supabase
+    .from("matches")
+    .insert({
+      matchday_id: matchdayId,
+      home_team_id,
+      away_team_id,
+      home_score,
+      away_score,
+    })
+    .select("id")
+    .single()
+
+  if (insErr || !inserted?.id) {
+    return { error: insErr?.message ?? "Création du match impossible." }
   }
+  return { ok: true, matchId: inserted.id }
+}
+
+const STANDARD_BONUS_OUTCOMES = new Set(["win", "loss_or_draw"])
+const MIROIR_OUTCOMES = new Set(["mirror_wasted", "mirror_genius", "mirror_draw"])
+const VALISE_OUTCOMES = new Set(["win", "no_goal_to_cancel"])
+
+function isValidBonusOutcome(bonusType: string, outcome: string): boolean {
+  const t = bonusType.toLowerCase()
+  const o = outcome.toLowerCase()
+  if (t === "miroir") return MIROIR_OUTCOMES.has(o)
+  if (t === "valise_nanard") return VALISE_OUTCOMES.has(o)
+  return STANDARD_BONUS_OUTCOMES.has(o)
+}
+
+async function syncMatchBonusesDual(
+  supabase: SupabaseClient,
+  matchId: string,
+  home_team_id: string,
+  away_team_id: string,
+  seasonId: string,
+  homeBonusTypeRaw: string,
+  homeBonusOutcomeRaw: string,
+  awayBonusTypeRaw: string,
+  awayBonusOutcomeRaw: string,
+  homeHighlight: boolean,
+  awayHighlight: boolean
+): Promise<{ error: string } | { ok: true }> {
+  const { error: delErr } = await supabase.from("match_bonuses").delete().eq("match_id", matchId)
+  if (delErr) return { error: delErr.message }
+
+  const homeT = homeBonusTypeRaw.trim().toLowerCase()
+  const awayT = awayBonusTypeRaw.trim().toLowerCase()
+
+  type Ins = { manager_id: string; bonus_type: string; bonus_outcome: string; highlight: boolean }
+  const toInsert: Ins[] = []
+
+  if (homeT) {
+    const ho = homeBonusOutcomeRaw.trim().toLowerCase()
+    if (!ho) {
+      return {
+        error:
+          "Bonus domicile : choisissez un résultat pour le type de bonus sélectionné, ou repassez le type sur « Aucun ».",
+      }
+    }
+    if (!isValidBonusOutcome(homeT, ho)) {
+      return { error: "Bonus domicile : combinaison type / résultat invalide." }
+    }
+    const { data: homeRow, error: hErr } = await supabase
+      .from("teams")
+      .select("manager_id")
+      .eq("id", home_team_id)
+      .eq("season_id", seasonId)
+      .maybeSingle()
+    if (hErr) return { error: hErr.message }
+    if (!homeRow?.manager_id) {
+      return { error: "Impossible de résoudre l’entraîneur pour l’équipe domicile." }
+    }
+    toInsert.push({
+      manager_id: homeRow.manager_id,
+      bonus_type: homeT,
+      bonus_outcome: ho,
+      highlight: homeHighlight,
+    })
+  }
+
+  if (awayT) {
+    const ao = awayBonusOutcomeRaw.trim().toLowerCase()
+    if (!ao) {
+      return {
+        error:
+          "Bonus extérieur : choisissez un résultat pour le type de bonus sélectionné, ou repassez le type sur « Aucun ».",
+      }
+    }
+    if (!isValidBonusOutcome(awayT, ao)) {
+      return { error: "Bonus extérieur : combinaison type / résultat invalide." }
+    }
+    const { data: awayRow, error: aErr } = await supabase
+      .from("teams")
+      .select("manager_id")
+      .eq("id", away_team_id)
+      .eq("season_id", seasonId)
+      .maybeSingle()
+    if (aErr) return { error: aErr.message }
+    if (!awayRow?.manager_id) {
+      return { error: "Impossible de résoudre l’entraîneur pour l’équipe extérieur." }
+    }
+    toInsert.push({
+      manager_id: awayRow.manager_id,
+      bonus_type: awayT,
+      bonus_outcome: ao,
+      highlight: awayHighlight,
+    })
+  }
+
+  if (toInsert.length === 0) return { ok: true }
+
+  const { error: insErr } = await supabase.from("match_bonuses").insert(
+    toInsert.map((row) => ({
+      match_id: matchId,
+      manager_id: row.manager_id,
+      bonus_type: row.bonus_type,
+      bonus_outcome: row.bonus_outcome,
+      highlight: row.highlight,
+    }))
+  )
+  if (insErr) return { error: insErr.message }
   return { ok: true }
 }
 
@@ -328,9 +440,38 @@ export async function submitBulkMatchResults(
         message: `Ligne ${r.lineIndex} : ${res.error}`,
       }
     }
+
+    const i = r.lineIndex - 1
+    const homeBonusType = String(formData.get(`home_bonus_type_${i}`) ?? "").trim()
+    const homeBonusOutcome = String(formData.get(`home_bonus_outcome_${i}`) ?? "").trim()
+    const awayBonusType = String(formData.get(`away_bonus_type_${i}`) ?? "").trim()
+    const awayBonusOutcome = String(formData.get(`away_bonus_outcome_${i}`) ?? "").trim()
+    const homeHighlight = String(formData.get(`home_bonus_highlight_${i}`) ?? "") === "on"
+    const awayHighlight = String(formData.get(`away_bonus_highlight_${i}`) ?? "") === "on"
+
+    const bonusSync = await syncMatchBonusesDual(
+      supabase,
+      res.matchId,
+      r.home_team_id,
+      r.away_team_id,
+      season.id,
+      homeBonusType,
+      homeBonusOutcome,
+      awayBonusType,
+      awayBonusOutcome,
+      homeHighlight,
+      awayHighlight
+    )
+    if ("error" in bonusSync) {
+      return {
+        ok: false,
+        message: `Ligne ${r.lineIndex} : ${bonusSync.error}`,
+      }
+    }
   }
 
   revalidatePath(`/ligue/${leagueSlug}`)
+  revalidatePath(`/ligue/${leagueSlug}/j/${matchday_number}`)
   revalidatePath("/admin/match-results")
 
   const n = toSave.length

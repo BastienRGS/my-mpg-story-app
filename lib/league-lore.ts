@@ -98,7 +98,7 @@ export const RIVALRIES_AND_LORE = {
   },
   YO_YO_CLUBS: {
     Deepblue: "S1 descente, remontée S6, S8 retour en bas — aujourd’hui en L2.",
-    Madinviet: "Montée S6, titre L1 en S8, descente S9 — le champion déchu, en L2.",
+    Madinviet: "Montée S6, titre L1 en S8 — Anomalie statistique, descente S9 , en L2.",
     CelticGossbo:
       "Montée S1, descente S5, remontée S7 ; toujours en lice en L1 en S10 — le survivant.",
     OMT: "Montée S4, descente S8, retour S9 — de nouveau en L1.",
@@ -365,7 +365,7 @@ export function getLoreForMatch(homeTeam: string, awayTeam: string): string | nu
     return "Le premier roi contre le fondateur : Bab Olympique, légende déchue, défie celui qui a tout lancé."
   }
   if (ha && aw && hasKeys(ha, aw, "golden_roosters", "madeinviet")) {
-    return "La dynastie face au champion déchu : Madeinviet veut prouver que le titre de 2024 n’était pas un accident."
+    return "La dynastie face à l'anomalie statistique : Madeinviet veut prouver que le titre de 2024 n’était pas un accident."
   }
   if (ha && aw && hasKeys(ha, aw, "golden_roosters", "mat_fc")) {
     return "Mat FC, dernier « autre » champion en date, tente de freiner la machine Golden Roosters."
@@ -386,7 +386,7 @@ const COACH_LORE_TAG: Partial<Record<TeamKey, string>> = {
   golden_roosters: "Ultra champion",
   jakattak: "Fondateur en quête de trône",
   bab_olympique: "Légende déchue",
-  madeinviet: "Champion déchu",
+  madeinviet: "Anomalie statistique",
   deepblue: "Club yo-yo",
   celtic_gossbo: "Le survivant",
   omt: "Rebondisseur",

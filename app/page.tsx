@@ -20,7 +20,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
-      <h1 className="text-xl font-semibold text-foreground">Aucune ligue disponible</h1>
+      <h1 className="text-xl text-foreground">Aucune ligue disponible</h1>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">
         Ajoutez une ligue dans Supabase ou définissez{" "}
         <code className="rounded bg-muted px-1 py-0.5 text-xs">NEXT_PUBLIC_DEFAULT_LEAGUE_SLUG</code> une fois

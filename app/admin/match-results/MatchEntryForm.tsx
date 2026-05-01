@@ -20,6 +20,75 @@ export type LeagueOption = {
 const DEFAULT_ROWS = 6
 const MAX_ROWS = 40
 
+const BONUS_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "Aucun" },
+  { value: "zahia", label: "Zahia" },
+  { value: "suarez", label: "Suarez" },
+  { value: "cheat_code", label: "Cheat Code 18-26" },
+  { value: "4decat", label: "4 Decat" },
+  { value: "miroir", label: "Miroir" },
+  { value: "tonton_pat", label: "Tonton Pat'" },
+  { value: "valise_nanard", label: "Valise à Nanard" },
+  { value: "mcdo_plus", label: "McDo+" },
+  { value: "capitaine", label: "Capitaine" },
+]
+
+/** Types dont le résultat est déduit des buts (sauf Miroir = manuel). */
+const AUTO_OUTCOME_TYPES = new Set([
+  "zahia",
+  "suarez",
+  "cheat_code",
+  "4decat",
+  "mcdo_plus",
+  "tonton_pat",
+  "capitaine",
+  "valise_nanard",
+])
+
+function isAutoOutcomeBonusType(bonusType: string): boolean {
+  return AUTO_OUTCOME_TYPES.has(bonusType.trim().toLowerCase())
+}
+
+function computeAutoBonusOutcome(
+  side: "home" | "away",
+  bonusType: string,
+  homeScore: number,
+  awayScore: number
+): "win" | "loss_or_draw" | "no_goal_to_cancel" {
+  const bt = bonusType.trim().toLowerCase()
+  const hs = Number.isFinite(homeScore) ? Math.max(0, Math.floor(homeScore)) : 0
+  const asco = Number.isFinite(awayScore) ? Math.max(0, Math.floor(awayScore)) : 0
+
+  if (bt === "valise_nanard") {
+    if (side === "home") {
+      if (asco === 0) return "no_goal_to_cancel"
+      if (hs > asco) return "win"
+      return "loss_or_draw"
+    }
+    if (hs === 0) return "no_goal_to_cancel"
+    if (asco > hs) return "win"
+    return "loss_or_draw"
+  }
+
+  if (side === "home") {
+    if (hs > asco) return "win"
+    return "loss_or_draw"
+  }
+  if (asco > hs) return "win"
+  return "loss_or_draw"
+}
+
+function formatDetectedOutcomeLabel(outcome: "win" | "loss_or_draw" | "no_goal_to_cancel"): string {
+  if (outcome === "win") return "Résultat détecté automatiquement : Victoire ✓"
+  if (outcome === "no_goal_to_cancel") {
+    return "Résultat détecté automatiquement : Pas de but adverse à annuler (valise pour rien) ✓"
+  }
+  return "Résultat détecté automatiquement : Défaite ou nul ✓"
+}
+
+const selectClassName =
+  "border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+
 const initialState: MatchEntryActionState = { ok: false, message: "" }
 
 function SubmitButton({ disabled }: { disabled?: boolean }) {
@@ -53,11 +122,91 @@ function teamsUsedInOtherRows(
   return used
 }
 
+function bonusRowTitle(side: "home" | "away", teamId: string, teams: { id: string; label: string }[]): string {
+  if (!teamId.trim()) {
+    return side === "home" ? "Bonus Équipe A" : "Bonus Équipe B"
+  }
+  const label = teams.find((t) => t.id === teamId)?.label?.trim()
+  return label ? `Bonus ${label}` : side === "home" ? "Bonus Équipe A" : "Bonus Équipe B"
+}
+
+function MirrorOutcomeSelect({
+  prefix,
+  rowIndex,
+}: {
+  prefix: "home" | "away"
+  rowIndex: number
+}) {
+  const name = `${prefix}_bonus_outcome_${rowIndex}`
+  return (
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
+      <span className="text-sm text-muted-foreground sm:mt-2 sm:w-32 sm:shrink-0">Résultat</span>
+      <select
+        key={`${prefix}-${rowIndex}-miroir`}
+        id={name}
+        name={name}
+        className={`${selectClassName} sm:flex-1`}
+        defaultValue=""
+      >
+        <option value="">— Choisir —</option>
+        <option value="mirror_wasted">Miroir inutile</option>
+        <option value="mirror_genius">Miroir génie</option>
+        <option value="mirror_draw">Miroir nul</option>
+      </select>
+    </div>
+  )
+}
+
+function BonusOutcomeBlock({
+  prefix,
+  rowIndex,
+  bonusType,
+  homeScore,
+  awayScore,
+}: {
+  prefix: "home" | "away"
+  rowIndex: number
+  bonusType: string
+  homeScore: number
+  awayScore: number
+}) {
+  const name = `${prefix}_bonus_outcome_${rowIndex}`
+  const bt = bonusType.trim().toLowerCase()
+
+  if (bt === "miroir") {
+    return (
+      <div className="border-l-2 border-muted/80 pl-3 sm:ml-[calc(8rem+0.75rem)]">
+        <MirrorOutcomeSelect prefix={prefix} rowIndex={rowIndex} />
+      </div>
+    )
+  }
+
+  if (isAutoOutcomeBonusType(bt)) {
+    const outcome = computeAutoBonusOutcome(prefix, bt, homeScore, awayScore)
+    return (
+      <div className="border-l-2 border-muted/80 pl-3 sm:ml-[calc(8rem+0.75rem)]">
+        <input type="hidden" name={name} value={outcome} />
+        <p className="text-xs italic text-muted-foreground">{formatDetectedOutcomeLabel(outcome)}</p>
+      </div>
+    )
+  }
+
+  return null
+}
+
 export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProps) {
   const [state, formAction] = useActionState(submitBulkMatchResults, initialState)
   const [numRows, setNumRows] = useState(DEFAULT_ROWS)
   const [homeSelections, setHomeSelections] = useState<string[]>(() => Array(DEFAULT_ROWS).fill(""))
   const [awaySelections, setAwaySelections] = useState<string[]>(() => Array(DEFAULT_ROWS).fill(""))
+  const [homeScores, setHomeScores] = useState<number[]>(() => Array(DEFAULT_ROWS).fill(0))
+  const [awayScores, setAwayScores] = useState<number[]>(() => Array(DEFAULT_ROWS).fill(0))
+  const [homeBonusTypeSelections, setHomeBonusTypeSelections] = useState<string[]>(() =>
+    Array(DEFAULT_ROWS).fill("")
+  )
+  const [awayBonusTypeSelections, setAwayBonusTypeSelections] = useState<string[]>(() =>
+    Array(DEFAULT_ROWS).fill("")
+  )
 
   const activeLeague = useMemo(
     () => leagueOptions.find((l) => l.slug === leagueSlug),
@@ -71,6 +220,10 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
     setNumRows(DEFAULT_ROWS)
     setHomeSelections(Array(DEFAULT_ROWS).fill(""))
     setAwaySelections(Array(DEFAULT_ROWS).fill(""))
+    setHomeScores(Array(DEFAULT_ROWS).fill(0))
+    setAwayScores(Array(DEFAULT_ROWS).fill(0))
+    setHomeBonusTypeSelections(Array(DEFAULT_ROWS).fill(""))
+    setAwayBonusTypeSelections(Array(DEFAULT_ROWS).fill(""))
   }, [leagueSlug])
 
   useEffect(() => {
@@ -81,6 +234,22 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
     setAwaySelections((a) => {
       if (numRows > a.length) return [...a, ...Array(numRows - a.length).fill("")]
       return a.slice(0, numRows)
+    })
+    setHomeScores((s) => {
+      if (numRows > s.length) return [...s, ...Array(numRows - s.length).fill(0)]
+      return s.slice(0, numRows)
+    })
+    setAwayScores((s) => {
+      if (numRows > s.length) return [...s, ...Array(numRows - s.length).fill(0)]
+      return s.slice(0, numRows)
+    })
+    setHomeBonusTypeSelections((b) => {
+      if (numRows > b.length) return [...b, ...Array(numRows - b.length).fill("")]
+      return b.slice(0, numRows)
+    })
+    setAwayBonusTypeSelections((b) => {
+      if (numRows > b.length) return [...b, ...Array(numRows - b.length).fill("")]
+      return b.slice(0, numRows)
     })
   }, [numRows])
 
@@ -98,10 +267,25 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
           if (hs) hs.value = ""
           if (awayEl) awayEl.value = ""
         }
+        const homeBt = String((form.elements.namedItem(`home_bonus_type_${i}`) as HTMLSelectElement | null)?.value ?? "").trim()
+        if (!homeBt) {
+          const bo = form.elements.namedItem(`home_bonus_outcome_${i}`) as HTMLInputElement | null
+          if (bo) bo.value = ""
+        }
+        const awayBt = String((form.elements.namedItem(`away_bonus_type_${i}`) as HTMLSelectElement | null)?.value ?? "").trim()
+        if (!awayBt) {
+          const bo = form.elements.namedItem(`away_bonus_outcome_${i}`) as HTMLInputElement | null
+          if (bo) bo.value = ""
+        }
       }
     },
     [numRows]
   )
+
+  const parseScore = (v: string): number => {
+    const n = parseInt(v, 10)
+    return Number.isFinite(n) && n >= 0 ? n : 0
+  }
 
   return (
     <form action={formAction} onSubmit={prepareSubmit} className="space-y-6 rounded-xl border border-border bg-card p-4 sm:p-6">
@@ -183,7 +367,6 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
             role="group"
             aria-label="Grille des matchs"
           >
-            {/* En-tête desktop */}
             <div className="mb-1 hidden gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[1fr_4.5rem_4.5rem_1fr] sm:items-end sm:gap-3">
               <span>Équipe A</span>
               <span className="text-center">Buts A</span>
@@ -195,102 +378,228 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
               const usedElsewhere = teamsUsedInOtherRows(i, homeSelections, awaySelections)
               const homeVal = homeSelections[i] ?? ""
               const awayVal = awaySelections[i] ?? ""
+              const hs = homeScores[i] ?? 0
+              const asco = awayScores[i] ?? 0
+              const homeBt = homeBonusTypeSelections[i] ?? ""
+              const awayBt = awayBonusTypeSelections[i] ?? ""
 
               return (
                 <div
                   key={`${leagueSlug}-${i}`}
-                  className="grid gap-3 rounded-md border border-border/60 bg-card/80 p-3 sm:grid-cols-[1fr_4.5rem_4.5rem_1fr] sm:items-center sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0"
+                  className="space-y-4 rounded-md border border-border/60 bg-card/80 p-3"
                   aria-label={`Match ligne ${i + 1}`}
                 >
-                  <div className="space-y-1 sm:space-y-0">
-                    <Label htmlFor={`home_team_id_${i}`} className="sm:sr-only">
-                      Équipe A (ligne {i + 1})
-                    </Label>
-                    <select
-                      id={`home_team_id_${i}`}
-                      name={`home_team_id_${i}`}
-                      value={homeVal}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setHomeSelections((prev) => {
-                          const next = [...prev]
-                          next[i] = v
-                          return next
-                        })
-                      }}
-                      className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                    >
-                      <option value="">— Équipe A —</option>
-                      {teams.map((t) => (
-                        <option
-                          key={t.id}
-                          value={t.id}
-                          disabled={usedElsewhere.has(t.id) && t.id !== homeVal}
-                        >
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 sm:contents">
+                  <div className="grid gap-3 sm:grid-cols-[1fr_4.5rem_4.5rem_1fr] sm:items-center sm:gap-3">
                     <div className="space-y-1 sm:space-y-0">
-                      <Label htmlFor={`home_score_${i}`} className="sm:sr-only">
-                        Buts A
+                      <Label htmlFor={`home_team_id_${i}`} className="sm:sr-only">
+                        Équipe A (ligne {i + 1})
                       </Label>
-                      <Input
-                        id={`home_score_${i}`}
-                        name={`home_score_${i}`}
-                        type="number"
-                        min={0}
-                        inputMode="numeric"
-                        defaultValue={0}
-                        className="h-9 w-full sm:max-w-[4.5rem]"
-                      />
+                      <select
+                        id={`home_team_id_${i}`}
+                        name={`home_team_id_${i}`}
+                        value={homeVal}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setHomeSelections((prev) => {
+                            const next = [...prev]
+                            next[i] = v
+                            return next
+                          })
+                        }}
+                        className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      >
+                        <option value="">— Équipe A —</option>
+                        {teams.map((t) => (
+                          <option
+                            key={t.id}
+                            value={t.id}
+                            disabled={usedElsewhere.has(t.id) && t.id !== homeVal}
+                          >
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:contents">
+                      <div className="space-y-1 sm:space-y-0">
+                        <Label htmlFor={`home_score_${i}`} className="sm:sr-only">
+                          Buts A
+                        </Label>
+                        <Input
+                          key={`home-sc-${leagueSlug}-${i}`}
+                          id={`home_score_${i}`}
+                          name={`home_score_${i}`}
+                          type="number"
+                          min={0}
+                          inputMode="numeric"
+                          defaultValue={0}
+                          onChange={(e) => {
+                            const v = parseScore(e.target.value)
+                            setHomeScores((prev) => {
+                              const next = [...prev]
+                              next[i] = v
+                              return next
+                            })
+                          }}
+                          className="h-9 w-full sm:max-w-[4.5rem]"
+                        />
+                      </div>
+                      <div className="space-y-1 sm:space-y-0">
+                        <Label htmlFor={`away_score_${i}`} className="sm:sr-only">
+                          Buts B
+                        </Label>
+                        <Input
+                          key={`away-sc-${leagueSlug}-${i}`}
+                          id={`away_score_${i}`}
+                          name={`away_score_${i}`}
+                          type="number"
+                          min={0}
+                          inputMode="numeric"
+                          defaultValue={0}
+                          onChange={(e) => {
+                            const v = parseScore(e.target.value)
+                            setAwayScores((prev) => {
+                              const next = [...prev]
+                              next[i] = v
+                              return next
+                            })
+                          }}
+                          className="h-9 w-full sm:max-w-[4.5rem]"
+                        />
+                      </div>
                     </div>
                     <div className="space-y-1 sm:space-y-0">
-                      <Label htmlFor={`away_score_${i}`} className="sm:sr-only">
-                        Buts B
+                      <Label htmlFor={`away_team_id_${i}`} className="sm:sr-only">
+                        Équipe B (ligne {i + 1})
                       </Label>
-                      <Input
-                        id={`away_score_${i}`}
-                        name={`away_score_${i}`}
-                        type="number"
-                        min={0}
-                        inputMode="numeric"
-                        defaultValue={0}
-                        className="h-9 w-full sm:max-w-[4.5rem]"
-                      />
+                      <select
+                        id={`away_team_id_${i}`}
+                        name={`away_team_id_${i}`}
+                        value={awayVal}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setAwaySelections((prev) => {
+                            const next = [...prev]
+                            next[i] = v
+                            return next
+                          })
+                        }}
+                        className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      >
+                        <option value="">— Équipe B —</option>
+                        {teams.map((t) => (
+                          <option
+                            key={t.id}
+                            value={t.id}
+                            disabled={usedElsewhere.has(t.id) && t.id !== awayVal}
+                          >
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
-                  <div className="space-y-1 sm:space-y-0">
-                    <Label htmlFor={`away_team_id_${i}`} className="sm:sr-only">
-                      Équipe B (ligne {i + 1})
-                    </Label>
-                    <select
-                      id={`away_team_id_${i}`}
-                      name={`away_team_id_${i}`}
-                      value={awayVal}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setAwaySelections((prev) => {
-                          const next = [...prev]
-                          next[i] = v
-                          return next
-                        })
-                      }}
-                      className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                    >
-                      <option value="">— Équipe B —</option>
-                      {teams.map((t) => (
-                        <option
-                          key={t.id}
-                          value={t.id}
-                          disabled={usedElsewhere.has(t.id) && t.id !== awayVal}
+
+                  <div className="flex flex-col gap-4 border-t border-border/60 pt-4">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                          {bonusRowTitle("home", homeVal, teams)}
+                        </span>
+                        <select
+                          id={`home_bonus_type_${i}`}
+                          name={`home_bonus_type_${i}`}
+                          value={homeBt}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setHomeBonusTypeSelections((prev) => {
+                              const next = [...prev]
+                              next[i] = v
+                              return next
+                            })
+                          }}
+                          className={`${selectClassName} sm:min-w-0 sm:flex-1`}
                         >
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
+                          {BONUS_TYPE_OPTIONS.map((opt) => (
+                            <option key={`h-${i}-${opt.value || "aucun"}`} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {homeBt ? (
+                        <>
+                          <BonusOutcomeBlock
+                            prefix="home"
+                            rowIndex={i}
+                            bonusType={homeBt}
+                            homeScore={hs}
+                            awayScore={asco}
+                          />
+                          <label className="flex cursor-pointer items-start gap-2 pt-1 sm:ml-[calc(8rem+0.75rem)]">
+                            <input
+                              type="checkbox"
+                              name={`home_bonus_highlight_${i}`}
+                              value="on"
+                              className="mt-1 size-4 shrink-0 rounded border border-input accent-primary"
+                            />
+                            <span className="text-xs text-muted-foreground leading-snug">
+                              Mettre ce bonus en avant dans la synthèse
+                            </span>
+                          </label>
+                        </>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                          {bonusRowTitle("away", awayVal, teams)}
+                        </span>
+                        <select
+                          id={`away_bonus_type_${i}`}
+                          name={`away_bonus_type_${i}`}
+                          value={awayBt}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setAwayBonusTypeSelections((prev) => {
+                              const next = [...prev]
+                              next[i] = v
+                              return next
+                            })
+                          }}
+                          className={`${selectClassName} sm:min-w-0 sm:flex-1`}
+                        >
+                          {BONUS_TYPE_OPTIONS.map((opt) => (
+                            <option key={`a-${i}-${opt.value || "aucun"}`} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {awayBt ? (
+                        <>
+                          <BonusOutcomeBlock
+                            prefix="away"
+                            rowIndex={i}
+                            bonusType={awayBt}
+                            homeScore={hs}
+                            awayScore={asco}
+                          />
+                          <label className="flex cursor-pointer items-start gap-2 pt-1 sm:ml-[calc(8rem+0.75rem)]">
+                            <input
+                              type="checkbox"
+                              name={`away_bonus_highlight_${i}`}
+                              value="on"
+                              className="mt-1 size-4 shrink-0 rounded border border-input accent-primary"
+                            />
+                            <span className="text-xs text-muted-foreground leading-snug">
+                              Mettre ce bonus en avant dans la synthèse
+                            </span>
+                          </label>
+                        </>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               )

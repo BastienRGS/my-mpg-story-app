@@ -1,3 +1,6 @@
+import type { ReactNode } from "react"
+import type { BonusHighlightBlock } from "@/lib/types"
+import { MatchdayNarrativeBonusSection } from "@/components/sections/MatchdayNarrative"
 import type { StoryTextSegment } from "@/lib/dashboard-story-copy"
 import { cn } from "@/lib/utils"
 
@@ -13,20 +16,48 @@ function Paragraph({ segments }: { segments: StoryTextSegment[] }) {
   )
 }
 
-type Props = {
-  paragraphs: [StoryTextSegment[], StoryTextSegment[], StoryTextSegment[]]
+function NarrativeSubsection({
+  kicker,
+  children,
+  withTopBorder,
+}: {
+  kicker: string
+  children: ReactNode
+  withTopBorder?: boolean
+}) {
+  return (
+    <div className={cn("space-y-2", withTopBorder && "border-t border-border/60 pt-5")}>
+      <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{kicker}</h3>
+      {children}
+    </div>
+  )
 }
 
-export function DashboardStorySynthesis({ paragraphs }: Props) {
+type Props = {
+  paragraphs: [StoryTextSegment[], StoryTextSegment[], StoryTextSegment[]]
+  bonusHighlight: BonusHighlightBlock | null
+}
+
+export function DashboardStorySynthesis({ paragraphs, bonusHighlight }: Props) {
   return (
     <section className="space-y-4" aria-labelledby="synthesis-heading">
       <h2 id="synthesis-heading" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
         La synthèse
       </h2>
-      <div className="space-y-4 rounded-2xl border border-border/80 bg-card/50 px-4 py-5 sm:space-y-5 sm:px-6 sm:py-6">
-        <Paragraph segments={paragraphs[0]} />
-        <Paragraph segments={paragraphs[1]} />
-        <Paragraph segments={paragraphs[2]} />
+      <div className="space-y-5 rounded-2xl border border-border/80 bg-card/50 px-4 py-5 sm:space-y-6 sm:px-6 sm:py-6">
+        <NarrativeSubsection kicker="HÉROS DU JOUR">
+          <Paragraph segments={paragraphs[1]} />
+        </NarrativeSubsection>
+
+        <MatchdayNarrativeBonusSection bonusHighlight={bonusHighlight} variant="dashboard" />
+
+        <NarrativeSubsection kicker="IMPACT CLASSEMENT" withTopBorder>
+          <Paragraph segments={paragraphs[0]} />
+        </NarrativeSubsection>
+
+        <div className="border-t border-border/60 pt-5">
+          <Paragraph segments={paragraphs[2]} />
+        </div>
       </div>
     </section>
   )

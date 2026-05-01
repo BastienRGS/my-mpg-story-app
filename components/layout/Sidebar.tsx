@@ -84,19 +84,22 @@ export function Sidebar({ className, leagueSlug }: SidebarProps) {
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
+      <div className="flex h-auto min-h-16 items-center justify-between border-b border-sidebar-border px-4 py-3">
         {!collapsed && (
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Trophy className="h-5 w-5 text-primary-foreground" />
+          <Link href="/" className="flex min-w-0 flex-col gap-1.5">
+            <div className="logotype flex flex-wrap items-baseline gap-0 leading-none">
+              <span className="font-display text-xl text-white">La Gazz</span>
+              <span className="font-display text-xl text-primary">attak</span>
             </div>
-            <span className="text-lg font-bold text-sidebar-foreground">Fair Route</span>
+            <div className="logotype-tagline hidden md:block">
+            Vos résultats, vos humiliations, votre gloire !
+            </div>
           </Link>
         )}
         {collapsed && (
-          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Trophy className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <Link href="/" className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-primary" title="La Gazzattak">
+            <Trophy className="h-5 w-5 text-primary-foreground" aria-hidden />
+          </Link>
         )}
       </div>
 

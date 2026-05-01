@@ -23,6 +23,7 @@ import {
 import StandingsEvolutionChart from "@/components/charts/StandingsEvolutionChart"
 import { createClient } from "@/lib/supabase/server"
 import { ShareButton } from "@/components/matchday/ShareButton"
+import { MatchdayNarrativeBonusSection } from "@/components/sections/MatchdayNarrative"
 import { AlertCircle, Info } from "lucide-react"
 import type { LeagueStoryKpi } from "@/lib/league-story-kpis"
 import type { ManagerWithTeam, StandingsHistoryWithManager } from "@/lib/types"
@@ -33,7 +34,7 @@ export const dynamic = "force-dynamic"
 const NEWSPAPER_VARS: CSSProperties = {
   ["--color-bg" as string]: "#0a0a0a",
   ["--color-surface" as string]: "#141414",
-  ["--color-accent" as string]: "#FFE000",
+  ["--color-accent" as string]: "#3ddc84",
   ["--color-alert" as string]: "#E8000D",
   ["--color-text" as string]: "#ffffff",
   ["--color-muted" as string]: "#888888",
@@ -73,8 +74,8 @@ function SectionKicker({ children, id }: { children: ReactNode; id?: string }) {
   return (
     <h2
       id={id}
-      className="border-l-4 pl-3 text-xs font-extrabold uppercase tracking-[0.22em] text-[#FFE000]"
-      style={{ borderColor: "#FFE000" }}
+      className="section-label border-l-4 pl-3 font-extrabold"
+      style={{ borderColor: "#3ddc84" }}
     >
       {children}
     </h2>
@@ -92,7 +93,7 @@ function MatchdayKpiBlock({ kpi }: { kpi: LeagueStoryKpi }) {
   return (
     <article
       className="flex min-h-0 flex-col border border-white/5 bg-[#141414] pl-[3px]"
-      style={{ borderLeft: "3px solid #FFE000" }}
+      style={{ borderLeft: "3px solid #3ddc84" }}
     >
       <div className="p-4 sm:p-5">
         <p className="text-[0.65rem] font-extrabold uppercase tracking-[0.2em] text-[#888]">{kpi.title}</p>
@@ -115,7 +116,7 @@ function MatchdayKpiBlock({ kpi }: { kpi: LeagueStoryKpi }) {
           <p className="mt-3 text-[0.85rem] leading-[1.5] text-zinc-500">Pas encore assez de données.</p>
         )}
         {kpi.loreSubtitle ? (
-          <p className="mt-2 text-xs italic text-[#FFE000] sm:text-sm">{kpi.loreSubtitle}</p>
+          <p className="mt-2 text-xs italic text-[#3ddc84] sm:text-sm">{kpi.loreSubtitle}</p>
         ) : null}
       </div>
     </article>
@@ -166,6 +167,7 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
     matchesForMatchday,
     validatedMatchRows,
     standingsHistory,
+    bonusHighlight,
   } = data
 
   const supabase = await createClient()
@@ -253,8 +255,8 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
 
   const nTeams = sortedAfter.length
   const rowTextClass = (rank: number) => {
-    if (nTeams <= 1) return "text-[#FFE000]"
-    if (rank <= 2) return "text-[#FFE000]"
+    if (nTeams <= 1) return "text-[#3ddc84]"
+    if (rank <= 2) return "text-[#3ddc84]"
     if (rank > nTeams - 2) return "text-[#E8000D]"
     return "text-zinc-100"
   }
@@ -301,7 +303,7 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
           </Link>
           <Link
             href="/admin/match-results"
-            className="inline-flex min-h-10 w-fit max-w-full items-center justify-center border border-[#FFE000]/30 px-3 py-2 text-[0.6rem] font-mono font-semibold uppercase tracking-widest text-[#FFE000] transition hover:bg-[#FFE000]/10"
+            className="inline-flex min-h-10 w-fit max-w-full items-center justify-center border border-[#3ddc84]/30 px-3 py-2 text-[0.6rem] font-mono font-semibold uppercase tracking-widest text-[#3ddc84] transition hover:bg-[#3ddc84]/10"
           >
             Saisie admin / punchline
           </Link>
@@ -334,12 +336,12 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
         {/* 1. Masthead */}
         <header className="space-y-0 pb-8">
           <div className="flex min-h-6 flex-col justify-between gap-1 font-mono text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.2em] text-[#666] sm:flex-row sm:items-baseline sm:gap-2">
-            <span className="break-words text-[#888]">{(league.name || "JAKATTAK").toUpperCase()} MULTILIGUE</span>
+            <span className="break-words text-[#888]">LA GAZZATTAK</span>
             <span className="shrink-0 self-end sm:self-auto">{seasonRow}</span>
           </div>
           <div
             className="mt-3 w-full"
-            style={{ height: 1, background: "#FFE000" }}
+            style={{ height: 1, background: "#3ddc84" }}
             aria-hidden
           />
           {standingsBefore.length > 0 && standingsAfter.length > 0 ? (
@@ -349,7 +351,7 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
           ) : null}
 
           <h1
-            className="mt-4 w-full min-w-0 break-words font-black uppercase leading-[0.95] text-[#FFE000]"
+            className="font-display mt-4 w-full min-w-0 break-words uppercase leading-[0.95] text-[#3ddc84]"
             style={{ fontSize: "clamp(2rem, 8vw, 5rem)" }}
           >
             {mainHead.toLocaleUpperCase("fr-FR")}
@@ -409,10 +411,10 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
                         <div className="flex min-w-0 flex-col items-center justify-center self-center text-center">
                           <span
                             className={cn(
-                              "tabular-nums text-white",
-                              highScoring ? "text-[#FFE000]" : ""
+                              "font-display tabular-nums text-white",
+                              highScoring ? "text-[#3ddc84]" : ""
                             )}
-                            style={{ fontSize: "1.5rem", lineHeight: 1.1, fontWeight: 800 }}
+                            style={{ fontSize: "1.5rem", lineHeight: 1.1 }}
                           >
                             {hs != null && asco != null ? (
                               `${hs} – ${asco}`
@@ -438,6 +440,19 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
           </>
         ) : data.matchDataStatus === "ready" && matchesForMatchday.length === 0 ? (
           <p className="pb-8 text-sm text-zinc-500">Aucun score saisi.</p>
+        ) : null}
+
+        {data.matchDataStatus === "ready" && bonusHighlight ? (
+          <section className="space-y-3 pb-10" aria-label="Coups tordus de la journée">
+            <article
+              className="flex min-h-0 flex-col border border-white/5 bg-[#141414] pl-[3px]"
+              style={{ borderLeft: "3px solid #3ddc84" }}
+            >
+              <div className="p-4 sm:p-5">
+                <MatchdayNarrativeBonusSection bonusHighlight={bonusHighlight} variant="newspaper" />
+              </div>
+            </article>
+          </section>
         ) : null}
 
         {/* 3. KPIs */}
@@ -528,7 +543,7 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
                           <td
                             className={cn(
                               "px-1 py-2.5 pl-0 sm:px-2 sm:pl-0 font-mono text-xs font-bold tabular-nums sm:text-sm",
-                              isMine && "border-l-[3px] border-[#FFE000] pl-2 sm:pl-2"
+                              isMine && "border-l-[3px] border-[#3ddc84] pl-2 sm:pl-2"
                             )}
                           >
                             {row.rank}
@@ -573,7 +588,7 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
             >
               {episodePrevNum != null ? (
                 <Link
-                  className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/15 bg-[#1a1a1a] px-3 text-center text-xs font-black uppercase tracking-wide text-white transition hover:border-[#FFE000]/30 hover:text-[#FFE000]"
+                  className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/15 bg-[#1a1a1a] px-3 text-center text-xs font-black uppercase tracking-wide text-white transition hover:border-[#3ddc84]/30 hover:text-[#3ddc84]"
                   href={`/ligue/${encodeURIComponent(league.slug)}/j/${episodePrevNum}`}
                 >
                   ← Journée {episodePrevNum}
@@ -588,7 +603,7 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
               )}
               {episodeNextNum != null ? (
                 <Link
-                  className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/15 bg-[#1a1a1a] px-3 text-center text-xs font-black uppercase tracking-wide text-white transition hover:border-[#FFE000]/30 hover:text-[#FFE000]"
+                  className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/15 bg-[#1a1a1a] px-3 text-center text-xs font-black uppercase tracking-wide text-white transition hover:border-[#3ddc84]/30 hover:text-[#3ddc84]"
                   href={`/ligue/${encodeURIComponent(league.slug)}/j/${episodeNextNum}`}
                 >
                   Journée {episodeNextNum} →

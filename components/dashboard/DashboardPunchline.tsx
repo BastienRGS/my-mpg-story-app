@@ -14,9 +14,7 @@ export function DashboardPunchline({ punchline }: Props) {
         >
           « {punchline.trim()} »
         </blockquote>
-        <figcaption className="mt-5 text-[11px] font-semibold uppercase tracking-widest text-primary">
-          Punchline de la semaine
-        </figcaption>
+        <figcaption className="section-label mt-5">Punchline de la semaine</figcaption>
       </figure>
     </section>
   )

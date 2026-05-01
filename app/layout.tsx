@@ -1,14 +1,10 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: 'Fair Route - Fantasy Football Storytelling',
-  description: 'Le compagnon narratif de votre ligue fantasy entre amis',
+  title: 'La Gazzattak',
+  description: 'Vos résultats, vos humiliations, votre gloire.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -36,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className="dark" suppressHydrationWarning>
-      <body className="font-sans antialiased" suppressHydrationWarning>
+      <body className="antialiased" suppressHydrationWarning>
         {children}
         <Analytics />
       </body>

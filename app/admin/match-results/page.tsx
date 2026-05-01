@@ -41,7 +41,7 @@ export default async function AdminMatchResultsPage() {
   if (leagueOptions.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-xl font-bold">Saisie des résultats</h1>
+        <h1 className="text-xl">Saisie des résultats</h1>
         <p className="mt-2 text-sm text-muted-foreground">Aucune ligue trouvée dans Supabase.</p>
       </div>
     )
@@ -54,7 +54,7 @@ export default async function AdminMatchResultsPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Admin · workflow hebdomadaire
           </p>
-          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="flex items-center gap-2 text-2xl tracking-tight text-foreground sm:text-3xl">
             <ClipboardList className="h-7 w-7 shrink-0 text-primary" aria-hidden />
             Saisie des résultats
           </h1>

@@ -48,11 +48,22 @@ export function DashboardStandingsTable({ managers, standingsAfterMatchday, matc
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((row) => {
+            {sorted.map((row, idx) => {
               const mgr = managers.find((m) => m.id === row.manager_id)
+              const n = sorted.length
+              const isPromotionRow = idx < 2
+              const isRelegationRow = idx >= n - 2
+              const overlap = isPromotionRow && isRelegationRow
               return (
-                <TableRow key={row.id}>
-                  <TableCell className="font-semibold tabular-nums">{row.rank}</TableCell>
+                <TableRow
+                  key={row.id}
+                  className={cn(
+                    overlap && "text-foreground",
+                    !overlap && isPromotionRow && "text-[#3ddc84]",
+                    !overlap && isRelegationRow && "text-[#ff4444]"
+                  )}
+                >
+                  <TableCell className="font-display tabular-nums">{row.rank}</TableCell>
                   <TableCell className="font-medium">{mgr ? labelManager(mgr) : "—"}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.points ?? 0}</TableCell>
                   <TableCell className="text-right tabular-nums hidden sm:table-cell">

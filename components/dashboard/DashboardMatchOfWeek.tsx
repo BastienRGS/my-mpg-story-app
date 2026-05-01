@@ -60,13 +60,13 @@ export function DashboardMatchOfWeek({
                 "flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary/10 px-6 py-4 ring-2 ring-primary/30 sm:px-10 sm:py-6"
               )}
             >
-              <span className="text-4xl font-black tabular-nums text-primary sm:text-5xl lg:text-6xl">
+              <span className="font-display text-4xl tabular-nums text-primary sm:text-5xl lg:text-6xl">
                 {row.home_score}
               </span>
               <span className="text-2xl font-bold text-muted-foreground sm:text-3xl" aria-hidden>
                 –
               </span>
-              <span className="text-4xl font-black tabular-nums text-primary sm:text-5xl lg:text-6xl">
+              <span className="font-display text-4xl tabular-nums text-primary sm:text-5xl lg:text-6xl">
                 {row.away_score}
               </span>
             </div>

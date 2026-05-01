@@ -22,13 +22,13 @@ const iconFor: Record<LeagueStoryKpiSlug, typeof Flame> = {
 }
 
 const accentFor: Record<LeagueStoryKpiSlug, string> = {
-  hot_coach: "bg-chart-1/15 text-chart-1",
-  crisis_coach: "bg-destructive/10 text-destructive",
+  hot_coach: "bg-[#3ddc8415] text-[#3ddc84]",
+  crisis_coach: "border border-[#ff444440] bg-[#2a0a0a] text-[#ff4444]",
   defensive_wall: "bg-muted text-muted-foreground",
-  nuclear_attack: "bg-accent/15 text-accent",
-  comeback: "bg-primary/15 text-primary",
-  leader_pressure: "bg-chart-2/15 text-chart-2",
-  match_of_round: "bg-chart-3/15 text-chart-3",
+  nuclear_attack: "bg-[#3ddc8415] text-[#3ddc84]",
+  comeback: "bg-[#3ddc8415] text-[#3ddc84]",
+  leader_pressure: "bg-[#3ddc8415] text-[#3ddc84]",
+  match_of_round: "bg-[#ffd700]/15 text-[#ffd700]",
 }
 
 export function LeagueStoryKpiCard({ kpi, compact }: { kpi: LeagueStoryKpi; compact?: boolean }) {
@@ -58,7 +58,7 @@ export function LeagueStoryKpiCard({ kpi, compact }: { kpi: LeagueStoryKpi; comp
         <div className="min-w-0 flex-1">
           <p
             className={cn(
-              "font-semibold uppercase tracking-wide text-muted-foreground",
+              "font-semibold uppercase tracking-[0.2em] text-[#3ddc84]",
               compact ? "text-[10px] sm:text-[11px]" : "text-[11px]"
             )}
           >

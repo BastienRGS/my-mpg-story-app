@@ -53,12 +53,12 @@ function StatCell({ label, display }: { label: string; display: string }) {
       {/* Mobile : une ligne par stat (libellé + valeur visibles) */}
       <div className="flex items-center justify-between gap-2 text-left sm:hidden">
         <span className="text-xs text-muted-foreground">{label}</span>
-        <span className="text-sm font-semibold tabular-nums text-foreground">{display}</span>
+        <span className="font-display text-sm tabular-nums text-foreground">{display}</span>
       </div>
       {/* sm+ : 3 colonnes, libellé au-dessus */}
       <div className="hidden px-0.5 text-center sm:block">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="text-sm font-semibold tabular-nums text-foreground">{display}</div>
+        <div className="font-display text-sm tabular-nums text-foreground">{display}</div>
       </div>
     </div>
   )
@@ -101,12 +101,8 @@ export function ManagerCard({ data }: { data: ManagerCardData }) {
               {teamName ? <p className="text-xs text-muted-foreground">{teamName}</p> : null}
             </div>
             <Badge
-              className={cn(
-                "shrink-0 border font-bold",
-                currentLeague === "L1"
-                  ? "border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                  : "border-border/80 bg-muted text-muted-foreground"
-              )}
+              variant={currentLeague === "L1" ? "leagueL1" : "leagueL2"}
+              className="shrink-0"
             >
               {currentLeague}
             </Badge>
@@ -116,13 +112,13 @@ export function ManagerCard({ data }: { data: ManagerCardData }) {
           <div className="shrink-0 flex flex-wrap items-end gap-2">
             <span
               className={cn(
-                "text-3xl font-black tabular-nums leading-none",
-                rank === 1 ? "text-amber-500 dark:text-amber-400" : rank == null ? "text-muted-foreground" : "text-foreground"
+                "font-display font-black text-3xl tabular-nums leading-none",
+                rank === 1 ? "text-[color:var(--color-gold)]" : rank == null ? "text-muted-foreground" : "text-foreground"
               )}
             >
               {rank ?? "–"}
             </span>
-            <span className="text-sm text-muted-foreground">{points != null ? `${points} pts` : "–"}</span>
+            <span className="text-sm font-bold text-muted-foreground">{points != null ? `${points} pts` : "–"}</span>
             <FormDots form={form} />
           </div>
 
@@ -151,11 +147,11 @@ export function ManagerCard({ data }: { data: ManagerCardData }) {
                   >
                     <span className="inline-flex items-center gap-1.5 leading-6">
                       <Trophy
-                        className="size-6 shrink-0 text-amber-500 drop-shadow-[0_1px_2px_rgba(245,158,11,0.45)] dark:text-amber-400"
+                        className="size-6 shrink-0 text-[color:var(--color-gold)] drop-shadow-[0_1px_2px_rgba(255,215,0,0.35)]"
                         strokeWidth={2}
                         aria-hidden
                       />
-                      <span className="font-semibold tabular-nums leading-6 text-amber-700 dark:text-amber-400">
+                      <span className="font-semibold tabular-nums leading-6 text-[color:var(--color-gold)]">
                         ×{palmares.l1Titles}
                       </span>
                     </span>
@@ -197,7 +193,7 @@ export function ManagerCard({ data }: { data: ManagerCardData }) {
 
           <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
             {loreTag ? (
-              <Badge variant="secondary" className="w-fit text-xs font-medium">
+              <Badge variant="lore" className="w-fit text-xs">
                 {loreTag}
               </Badge>
             ) : null}

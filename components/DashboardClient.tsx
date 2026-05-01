@@ -163,7 +163,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
         <div className="max-w-md space-y-3 text-center sm:space-y-4">
-          <h1 className="text-xl font-bold text-foreground sm:text-2xl">Aucune ligue trouvée</h1>
+          <h1 className="text-xl text-foreground sm:text-2xl">Aucune ligue trouvée</h1>
           <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
             Créez une ligue et une saison dans Supabase pour afficher le récit de la compétition.
           </p>
@@ -251,9 +251,12 @@ export function DashboardClient({ data }: DashboardClientProps) {
             />
 
             {/* Transition visuelle + contenu clair */}
-            <div className="mt-12 space-y-10 border-t-2 border-zinc-800/90 bg-gradient-to-b from-muted/30 via-background to-background pt-10 sm:mt-16 sm:space-y-12 sm:pt-14">
+            <div className="mt-12 space-y-10 border-t-2 border-border bg-gradient-to-b from-muted/30 via-background to-background pt-10 sm:mt-16 sm:space-y-12 sm:pt-14">
               {/* 2. La synthèse */}
-              <DashboardStorySynthesis paragraphs={synthesisParagraphs} />
+              <DashboardStorySynthesis
+                paragraphs={synthesisParagraphs}
+                bonusHighlight={data.bonusHighlight}
+              />
 
               {/* 3. Punchline */}
               <DashboardPunchline punchline={matchdayPunchlineFromTable} />

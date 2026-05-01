@@ -22,6 +22,11 @@ import {
   resolveSeason10RosterTeamDivision,
   resolveTeamKey,
 } from '@/lib/league-lore'
+import type { BonusHighlightBlock } from '@/lib/types'
+import {
+  computeMatchdayBonusHighlight,
+  type MatchBonusRecord,
+} from '@/lib/matchday-narrative'
 
 /** Options for loading dashboard data (multi-league ready). */
 export type GetDashboardDataOptions = {
@@ -361,6 +366,43 @@ export async function getMatchResults(seasonId: string): Promise<{
   return { rows, error: null }
 }
 
+/** Bonus MPG liés à des matchs (lecture anon via RLS). */
+export async function getMatchBonusesForMatchIds(matchIds: string[]): Promise<MatchBonusRecord[]> {
+  if (matchIds.length === 0) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('match_bonuses')
+    .select('match_id, manager_id, bonus_type, bonus_outcome, created_at, highlight')
+    .in('match_id', matchIds)
+
+  if (error) {
+    console.error('Error fetching match_bonuses:', error)
+    return []
+  }
+
+  return (data ?? []) as MatchBonusRecord[]
+}
+
+/** Bonus mis en avant pour la synthèse (`highlight = true`). */
+export async function getHighlightedMatchBonusesForMatchIds(matchIds: string[]): Promise<MatchBonusRecord[]> {
+  if (matchIds.length === 0) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('match_bonuses')
+    .select('match_id, manager_id, bonus_type, bonus_outcome, created_at, highlight')
+    .in('match_id', matchIds)
+    .eq('highlight', true)
+
+  if (error) {
+    console.error('Error fetching highlighted match_bonuses:', error)
+    return []
+  }
+
+  return (data ?? []) as MatchBonusRecord[]
+}
+
 export async function getArticles(seasonId: string): Promise<Article[]> {
   const supabase = await createClient()
 
@@ -605,6 +647,7 @@ export type MatchdayEpisodePageData = {
   matchDataStatus: DashboardMatchDataStatus
   matchDataIssues: string[]
   matchesLoadError: string | null
+  bonusHighlight: BonusHighlightBlock | null
 }
 
 /**
@@ -661,6 +704,9 @@ export async function getMatchdayEpisodePageData(
     }
   }
 
+  const bonusRows = await getHighlightedMatchBonusesForMatchIds(matchesForMatchday.map((m) => m.id))
+  const bonusHighlight = computeMatchdayBonusHighlight(bonusRows, managers)
+
   return {
     league,
     season,
@@ -673,6 +719,7 @@ export async function getMatchdayEpisodePageData(
     matchDataStatus,
     matchDataIssues,
     matchesLoadError,
+    bonusHighlight,
   }
 }
 
@@ -738,6 +785,7 @@ function emptyDashboard(
     timelineEvents: [],
     currentMatchday: null,
     matchdayPunchlineFromTable: null,
+    bonusHighlight: null,
     ...overrides,
   }
 }
@@ -782,6 +830,7 @@ export async function getDashboardData(
   let standingsHistory: StandingsHistoryWithManager[] = []
   let currentMatchday: Matchday | null = null
   let matchdayPunchlineFromTable: string | null = null
+  let bonusHighlight: BonusHighlightBlock | null = null
 
   if (matchesLoadError) {
     matchDataStatus = 'load_error'
@@ -818,6 +867,10 @@ export async function getDashboardData(
 
   if (season && currentMatchday && currentMatchday.number >= 1) {
     matchdayPunchlineFromTable = await getPunchlineForSeasonMatchday(season.id, currentMatchday.number)
+    const mdNum = currentMatchday.number
+    const idsThisMd = matchResults.filter((r) => r.matchday_number === mdNum).map((r) => r.id)
+    const bonusRows = await getHighlightedMatchBonusesForMatchIds(idsThisMd)
+    bonusHighlight = computeMatchdayBonusHighlight(bonusRows, managers)
   }
 
   return {
@@ -835,5 +888,6 @@ export async function getDashboardData(
     timelineEvents,
     currentMatchday,
     matchdayPunchlineFromTable,
+    bonusHighlight,
   }
 }

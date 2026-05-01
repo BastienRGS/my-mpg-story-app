@@ -50,8 +50,8 @@ export default async function ManagersPage({ params }: PageProps) {
         </nav>
 
         <header className="space-y-2 border-b border-border/60 pb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Multiligue</p>
-          <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <p className="section-label">La Gazzattak</p>
+          <h1 className="text-balance text-2xl tracking-tight text-foreground sm:text-3xl">
             LES ENTRAÎNEURS
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">

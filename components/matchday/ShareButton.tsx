@@ -41,7 +41,7 @@ export function ShareButton({ shareUrl, title, className = "" }: ShareButtonProp
         type="button"
         onClick={handleClick}
         className={[
-          "min-h-12 w-full touch-manipulation rounded border border-[#FFE000]/30 bg-[#FFE000] px-4 py-3 text-sm font-black uppercase tracking-wide text-[#0a0a0a] transition hover:bg-[#e6cc00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFE000] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]",
+          "min-h-12 w-full touch-manipulation rounded border border-[#3ddc84]/40 bg-[#3ddc84] px-4 py-3 text-sm font-black uppercase tracking-wide text-[#0d0d0d] transition hover:bg-[#2ecf7a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ddc84] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]",
           className,
         ].join(" ")}
       >

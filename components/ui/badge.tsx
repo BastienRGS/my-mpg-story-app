@@ -17,6 +17,14 @@ const badgeVariants = cva(
           'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
         outline:
           'border-border/80 bg-card/70 text-foreground [a&]:hover:bg-secondary [a&]:hover:text-foreground',
+        leagueL1:
+          'border-transparent bg-[#3ddc84] font-bold text-[#0d0d0d] [a&]:hover:bg-[#3ddc84]/90',
+        leagueL2:
+          'border border-[#333333] bg-[#1a1a1a] font-semibold text-[#666666] [a&]:hover:bg-[#1a1a1a]/95',
+        lore:
+          'border border-[#3ddc8430] bg-[#3ddc8415] font-normal italic text-[#3ddc84]',
+        crisis:
+          'border border-[#ff444440] bg-[#2a0a0a] font-semibold text-[#ff4444]',
       },
     },
     defaultVariants: {

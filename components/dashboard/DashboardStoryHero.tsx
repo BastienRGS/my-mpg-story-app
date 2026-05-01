@@ -33,12 +33,12 @@ export function DashboardStoryHero({
 
       <div className="relative space-y-5 sm:space-y-6">
         <div className="space-y-3 sm:space-y-4">
-          <span className="inline-flex rounded-md border border-zinc-700 bg-zinc-900/90 px-2 py-0.5 text-[11px] font-bold tabular-nums tracking-wide text-zinc-200 sm:text-xs">
+          <span className="inline-flex rounded-md border border-zinc-700 bg-zinc-900/90 px-2 py-0.5 font-display text-[11px] tabular-nums tracking-wide text-zinc-200 sm:text-xs">
             <span className="sm:hidden">J{matchdayNumber}</span>
             <span className="hidden sm:inline">Journée {matchdayNumber}</span>
           </span>
 
-          <h1 className="text-balance text-3xl font-black leading-[1.12] tracking-tight sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1]">
+          <h1 className="font-display text-balance text-3xl leading-[1.12] tracking-tight sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1]">
             {headlineSegments.map((seg, i) => (
               <span key={i} className={cn(seg.emphasize && "text-primary")}>
                 {seg.text}

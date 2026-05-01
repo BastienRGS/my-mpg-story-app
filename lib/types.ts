@@ -1,5 +1,18 @@
 // Database types based on Supabase schema
 
+/** Une entrée « coup tordu » affichée dans la synthèse (bonus mis en avant). */
+export type BonusNarrativeEntry = {
+  coachName: string
+  bonusTypeLabel: string
+  narrative: string
+}
+
+/** Bloc narratif bonus (dashboard / épisode). */
+export type BonusHighlightBlock = {
+  title: string
+  entries: BonusNarrativeEntry[]
+}
+
 export interface League {
   id: string
   name: string
@@ -213,4 +226,6 @@ export interface DashboardData {
   currentMatchday: Matchday | null
   /** Punchline (`punchlines.text` pour `season_id` + `matchday_number` courants), si présente. */
   matchdayPunchlineFromTable: string | null
+  /** Bonus MPG saisi pour la journée courante (au plus un bloc narratif priorisé). */
+  bonusHighlight: BonusHighlightBlock | null
 }

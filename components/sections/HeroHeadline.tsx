@@ -62,7 +62,7 @@ export function HeroHeadline({
             </span>
           </div>
 
-          <h1 className="text-balance text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl lg:text-4xl">
+          <h1 className="text-balance text-2xl leading-tight tracking-tight text-foreground sm:text-3xl lg:text-4xl">
             {league.name}
           </h1>
 
