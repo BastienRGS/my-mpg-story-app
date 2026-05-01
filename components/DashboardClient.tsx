@@ -7,7 +7,7 @@ import { SeasonBattle } from "@/components/sections/SeasonBattle"
 import { LeagueStoryKpiGrid } from "@/components/sections/LeagueStoryKpiGrid"
 import { DashboardStoryHero } from "@/components/dashboard/DashboardStoryHero"
 import { DashboardMatchOfWeek } from "@/components/dashboard/DashboardMatchOfWeek"
-import { DashboardStorySynthesis } from "@/components/dashboard/DashboardStorySynthesis"
+import Link from "next/link"
 import { DashboardPunchline } from "@/components/dashboard/DashboardPunchline"
 import { DashboardStandingsTable } from "@/components/dashboard/DashboardStandingsTable"
 import { AlertCircle, Info, X } from "lucide-react"
@@ -46,6 +46,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
     matchDataIssues,
     currentMatchday,
     matchdayPunchlineFromTable,
+    bonusHighlight,
   } = data
 
   const lastMdFromStandings =
@@ -143,17 +144,6 @@ export function DashboardClient({ data }: DashboardClientProps) {
     matchOfRoundKpi,
   ])
 
-  const meta = useMemo(() => {
-    const matchesThisRound = ready
-      ? validatedMatchRows.filter((r) => r.matchday_number === matchdayNumber).length
-      : 0
-    return {
-      matchdayNumber,
-      matchesThisRound,
-      managerCount: managers.length,
-    }
-  }, [ready, validatedMatchRows, matchdayNumber, managers.length])
-
   const standingsAfter = useMemo(
     () => standingsHistory.filter((r) => r.matchday_number === matchdayNumber),
     [standingsHistory, matchdayNumber]
@@ -205,7 +195,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
         />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl space-y-8 px-4 py-4 sm:space-y-10 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <div className="mx-auto max-w-7xl space-y-8 px-4 pt-2 pb-4 sm:space-y-10 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
             {matchDataStatus === "load_error" || matchDataStatus === "invalid" ? (
               <Alert variant={matchDataStatus === "load_error" ? "destructive" : "default"}>
                 <AlertCircle className="h-4 w-4" aria-hidden />
@@ -240,25 +230,33 @@ export function DashboardClient({ data }: DashboardClientProps) {
               </Alert>
             ) : null}
 
-            {/* 1. Hero — titre principal = accroche éditoriale ; ligue · saison en contexte */}
+            {/* Masthead (hors carte) */}
+            <div className="mb-4">
+              <Link href="/" className="inline-flex flex-col gap-1.5 py-2">
+                <div className="logotype flex flex-wrap items-baseline gap-0 leading-none">
+                  <span className="text-[60px] font-semibold text-foreground [font-family:-apple-system]">La Gazz</span>
+                  <span className="text-[60px] font-semibold text-primary [font-family:-apple-system]">attak</span>
+                </div>
+                <div className="logotype-tagline !max-w-none w-[485px] whitespace-nowrap">
+                  Vos résultats, vos humiliations, votre gloire... ou pas !
+                </div>
+              </Link>
+            </div>
+
+            {/* Hero unique : accroche + intro (dek) + sous-récits synthèse */}
             <DashboardStoryHero
               matchdayNumber={matchdayNumber}
               leagueName={league.name}
               seasonName={season.name}
               headlineSegments={heroSegments}
               dek={heroDek}
-              meta={meta}
+              synthesisParagraphs={synthesisParagraphs}
+              bonusHighlight={bonusHighlight}
             />
 
-            {/* Transition visuelle + contenu clair */}
-            <div className="mt-12 space-y-10 border-t-2 border-border bg-gradient-to-b from-muted/30 via-background to-background pt-10 sm:mt-16 sm:space-y-12 sm:pt-14">
-              {/* 2. La synthèse */}
-              <DashboardStorySynthesis
-                paragraphs={synthesisParagraphs}
-                bonusHighlight={data.bonusHighlight}
-              />
-
-              {/* 3. Punchline */}
+            {/* Contenu sous le hero */}
+            <div className="!mt-0 mb-0 box-content space-y-10 pt-4 sm:space-y-12">
+              {/* Punchline */}
               <DashboardPunchline punchline={matchdayPunchlineFromTable} />
 
               {/* 4. Le choc */}
@@ -278,8 +276,11 @@ export function DashboardClient({ data }: DashboardClientProps) {
               />
 
               {/* 6. La bataille pour le titre */}
-              <section className="space-y-3">
-                <h2 className="px-0.5 text-lg font-bold tracking-tight text-foreground sm:text-xl">
+              <section className="mb-10 space-y-3" aria-labelledby="season-battle-heading">
+                <h2
+                  id="season-battle-heading"
+                  className="px-0.5 text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                >
                   La bataille pour le titre
                 </h2>
                 <SeasonBattle leagueId={league.id} managers={managers} standingsHistory={standingsHistory} />

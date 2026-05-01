@@ -36,7 +36,7 @@ export function LeagueStoryKpiCard({ kpi, compact }: { kpi: LeagueStoryKpi; comp
   return (
     <Card
       className={cn(
-        "border-border bg-card shadow-none transition-colors",
+        "border-border bg-card py-2 shadow-none transition-colors",
         kpi.hasData && "border-border/80"
       )}
     >
@@ -120,7 +120,7 @@ export function LeagueStoryKpiGrid({
   compact,
 }: LeagueStoryKpiGridProps) {
   return (
-    <section className="space-y-3 sm:space-y-4">
+    <section className="mb-10 space-y-3 sm:space-y-4">
       <header className="space-y-1 px-0.5">
         <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">{sectionTitle}</h2>
         {sectionDescription ? (

@@ -26,7 +26,7 @@ function NarrativeSubsection({
   withTopBorder?: boolean
 }) {
   return (
-    <div className={cn("space-y-2", withTopBorder && "border-t border-border/60 pt-5")}>
+    <div className={cn("space-y-2", withTopBorder && "mb-0 border-t border-border/60")}>
       <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{kicker}</h3>
       {children}
     </div>
@@ -38,6 +38,27 @@ type Props = {
   bonusHighlight: BonusHighlightBlock | null
 }
 
+/** Sous-blocs Héros / bonus / Impact / match — réutilisés dans le hero ou la carte « La synthèse » seule. */
+export function DashboardSynthesisInner({ paragraphs, bonusHighlight }: Props) {
+  return (
+    <>
+      <NarrativeSubsection kicker="HÉROS DU JOUR">
+        <Paragraph segments={paragraphs[1]} />
+      </NarrativeSubsection>
+
+      <MatchdayNarrativeBonusSection bonusHighlight={bonusHighlight} variant="dashboard" />
+
+      <NarrativeSubsection kicker="IMPACT CLASSEMENT" withTopBorder>
+        <Paragraph segments={paragraphs[0]} />
+      </NarrativeSubsection>
+
+      <div className="border-t border-border/60 pt-5">
+        <Paragraph segments={paragraphs[2]} />
+      </div>
+    </>
+  )
+}
+
 export function DashboardStorySynthesis({ paragraphs, bonusHighlight }: Props) {
   return (
     <section className="space-y-4" aria-labelledby="synthesis-heading">
@@ -45,19 +66,7 @@ export function DashboardStorySynthesis({ paragraphs, bonusHighlight }: Props) {
         La synthèse
       </h2>
       <div className="space-y-5 rounded-2xl border border-border/80 bg-card/50 px-4 py-5 sm:space-y-6 sm:px-6 sm:py-6">
-        <NarrativeSubsection kicker="HÉROS DU JOUR">
-          <Paragraph segments={paragraphs[1]} />
-        </NarrativeSubsection>
-
-        <MatchdayNarrativeBonusSection bonusHighlight={bonusHighlight} variant="dashboard" />
-
-        <NarrativeSubsection kicker="IMPACT CLASSEMENT" withTopBorder>
-          <Paragraph segments={paragraphs[0]} />
-        </NarrativeSubsection>
-
-        <div className="border-t border-border/60 pt-5">
-          <Paragraph segments={paragraphs[2]} />
-        </div>
+        <DashboardSynthesisInner paragraphs={paragraphs} bonusHighlight={bonusHighlight} />
       </div>
     </section>
   )

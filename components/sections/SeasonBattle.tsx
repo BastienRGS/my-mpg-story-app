@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
   CardDescription,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -134,11 +133,8 @@ export function SeasonBattle({ leagueId, managers, standingsHistory }: SeasonBat
   if (chartData.length === 0 || managers.length === 0) {
     return (
       <section>
-        <Card className="border-border bg-card shadow-none">
-          <CardHeader className="space-y-1 px-4 pb-2 pt-4 sm:px-6 sm:pt-6">
-            <CardTitle className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-              La bataille pour le titre
-            </CardTitle>
+        <Card className="border-border bg-card gap-2 py-0 shadow-none">
+          <CardHeader className="space-y-1 px-4 pb-0 pt-2 sm:px-6 sm:pt-6">
             <CardDescription className="text-sm text-muted-foreground">
               Évolution des places — jusqu&apos;à 4 managers comparés. Rank 1 en haut.
             </CardDescription>
@@ -159,11 +155,8 @@ export function SeasonBattle({ leagueId, managers, standingsHistory }: SeasonBat
 
   return (
     <section>
-      <Card className="border-border bg-card shadow-none">
-        <CardHeader className="space-y-1 px-4 pb-2 pt-4 sm:px-6 sm:pt-6">
-          <CardTitle className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            La bataille pour le titre
-          </CardTitle>
+      <Card className="border-border bg-card gap-2 py-0 shadow-none">
+        <CardHeader className="space-y-1 px-4 pb-0 pt-2 sm:px-6 sm:pt-6">
           <CardDescription className="text-sm leading-relaxed text-muted-foreground">
             Jusqu&apos;à <strong className="font-medium text-foreground">4 courbes</strong> : vous +{" "}
             {maxExtra} autres. La 1<sup>re</sup> place reste en haut du graphique.

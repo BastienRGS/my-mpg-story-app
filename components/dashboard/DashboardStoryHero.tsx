@@ -1,4 +1,6 @@
+import type { BonusHighlightBlock } from "@/lib/types"
 import type { StoryTextSegment } from "@/lib/dashboard-story-copy"
+import { DashboardSynthesisInner } from "@/components/dashboard/DashboardStorySynthesis"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -8,11 +10,8 @@ type Props = {
   seasonName: string
   headlineSegments: StoryTextSegment[]
   dek: string
-  meta: {
-    matchdayNumber: number
-    matchesThisRound: number
-    managerCount: number
-  }
+  synthesisParagraphs: [StoryTextSegment[], StoryTextSegment[], StoryTextSegment[]]
+  bonusHighlight: BonusHighlightBlock | null
 }
 
 export function DashboardStoryHero({
@@ -21,11 +20,12 @@ export function DashboardStoryHero({
   seasonName,
   headlineSegments,
   dek,
-  meta,
+  synthesisParagraphs,
+  bonusHighlight,
 }: Props) {
   return (
     <section
-      className="relative overflow-hidden rounded-2xl border border-primary/25 bg-zinc-950 px-4 pb-10 pt-8 text-zinc-50 shadow-xl shadow-black/20 sm:px-8 sm:pb-12 sm:pt-10"
+      className="relative mb-4 overflow-hidden rounded-2xl border border-primary/25 bg-zinc-950 px-4 pb-10 pt-8 text-zinc-50 shadow-xl shadow-black/20 sm:px-8 sm:pb-12 sm:pt-10"
       aria-label="À la une"
     >
       <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
@@ -55,22 +55,7 @@ export function DashboardStoryHero({
 
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-zinc-300 sm:text-base">{dek}</p>
 
-        <dl className="flex flex-wrap gap-x-6 gap-y-2 border-t border-zinc-800 pt-5 text-xs text-zinc-400 sm:text-sm">
-          <div>
-            <dt className="sr-only">Matchs cette journée</dt>
-            <dd>
-              <span className="font-semibold text-zinc-200">{meta.matchesThisRound}</span> match
-              {meta.matchesThisRound > 1 ? "s" : ""} comptabilisé{meta.matchesThisRound > 1 ? "s" : ""}
-            </dd>
-          </div>
-          <div>
-            <dt className="sr-only">Managers</dt>
-            <dd>
-              <span className="font-semibold text-zinc-200">{meta.managerCount}</span> coach
-              {meta.managerCount > 1 ? "es" : ""}
-            </dd>
-          </div>
-        </dl>
+        <DashboardSynthesisInner paragraphs={synthesisParagraphs} bonusHighlight={bonusHighlight} />
       </div>
     </section>
   )

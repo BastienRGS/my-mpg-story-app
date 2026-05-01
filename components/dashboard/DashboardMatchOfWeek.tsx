@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card"
 import type { ManagerWithTeam, ValidatedMatchRow } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -21,11 +21,13 @@ export function DashboardMatchOfWeek({
   row,
   sectionHeading = "Match de la semaine",
 }: Props) {
+  const sectionTitle = `${sectionHeading} de la J${matchdayNumber}`
+
   if (!row) {
     return (
-      <section className="space-y-3" aria-labelledby="motw-title">
+      <section className="mb-10 space-y-3" aria-labelledby="motw-title">
         <h2 id="motw-title" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-          {sectionHeading}
+          {sectionTitle}
         </h2>
         <Card className="border-dashed border-border bg-muted/10 shadow-none">
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
@@ -40,13 +42,12 @@ export function DashboardMatchOfWeek({
   const away = labelTeam(managers, row.away_team_id)
 
   return (
-    <section className="space-y-3" aria-labelledby="motw-title">
+    <section className="mb-10 space-y-3" aria-labelledby="motw-title">
       <h2 id="motw-title" className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-        {sectionHeading}
+        {sectionTitle}
       </h2>
-      <Card className="overflow-hidden border-border bg-card shadow-none">
-        <CardHeader className="space-y-1 border-b border-border/60 bg-muted/20 px-4 pb-3 pt-4 sm:px-6 sm:pt-5">
-          <CardTitle className="text-base sm:text-lg">Le choc de la J{matchdayNumber}</CardTitle>
+      <Card className="gap-2 overflow-hidden border-border bg-card py-0 shadow-none">
+        <CardHeader className="gap-x-[8px] gap-y-2 space-y-1 border-b border-border/60 bg-muted/20 px-4 pt-2 pb-2 [.border-b]:pb-2 sm:px-6 sm:pt-2">
           <CardDescription>Le match avec le plus de buts au compteur (à égalité, écart de score décisif).</CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
@@ -60,13 +61,13 @@ export function DashboardMatchOfWeek({
                 "flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary/10 px-6 py-4 ring-2 ring-primary/30 sm:px-10 sm:py-6"
               )}
             >
-              <span className="font-display text-4xl tabular-nums text-primary sm:text-5xl lg:text-6xl">
+              <span className="font-display text-4xl font-black tabular-nums text-primary sm:text-5xl lg:text-6xl">
                 {row.home_score}
               </span>
               <span className="text-2xl font-bold text-muted-foreground sm:text-3xl" aria-hidden>
                 –
               </span>
-              <span className="font-display text-4xl tabular-nums text-primary sm:text-5xl lg:text-6xl">
+              <span className="font-display text-4xl font-black tabular-nums text-primary sm:text-5xl lg:text-6xl">
                 {row.away_score}
               </span>
             </div>
