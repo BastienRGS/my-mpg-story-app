@@ -244,7 +244,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
                     attak
                   </span>
                 </div>
-                <div className="logotype-tagline w-full max-w-[42rem] text-pretty text-sm sm:text-base md:text-[1.125rem] md:leading-relaxed">
+                <div className="logotype-tagline w-full max-w-[42rem] text-pretty text-sm sm:text-base md:text-sm md:leading-relaxed">
                   Vos résultats, vos humiliations, votre gloire... ou pas !
                 </div>
               </Link>
