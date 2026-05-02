@@ -91,9 +91,6 @@ export function Sidebar({ className, leagueSlug }: SidebarProps) {
               <span className="font-display text-xl text-white">La Gazz</span>
               <span className="font-display text-xl text-primary">attak</span>
             </div>
-            <div className="logotype-tagline hidden md:block">
-            Vos résultats, vos humiliations, votre gloire !
-            </div>
           </Link>
         )}
         {collapsed && (

@@ -28,7 +28,7 @@
   --ring: #3ddc84;
   --radius: 0.625rem;
   --chart-1: #3ddc84;
-  --chart-2: #2bbf6a;
+  --chart-2: #58a6ff;
   --chart-3: #ffd700;
   --chart-4: #888888;
   --chart-5: #ff4444;
@@ -71,7 +71,7 @@
   --input: #1f1f1f;
   --ring: #3ddc84;
   --chart-1: #3ddc84;
-  --chart-2: #2bbf6a;
+  --chart-2: #58a6ff;
   --chart-3: #ffd700;
   --chart-4: #888888;
   --chart-5: #ff4444;
@@ -185,6 +185,9 @@
   .font-display {
     font-family: 'Barlow Condensed', system-ui, sans-serif;
     font-weight: 900;
+  }
+  .logotype span.font-display {
+    font-family: -apple-system;
   }
   .section-label {
     font-size: 10px;
