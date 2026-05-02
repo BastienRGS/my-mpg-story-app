@@ -236,15 +236,15 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 href="/"
                 className="inline-flex min-w-0 max-w-full flex-col gap-1 py-2 sm:gap-1.5"
               >
-                <div className="logotype flex flex-wrap items-baseline gap-x-1 gap-y-0 leading-[0.95] sm:gap-x-1.5">
-                  <span className="text-[clamp(1.875rem,6vw+0.5rem,3.75rem)] font-semibold text-foreground [font-family:-apple-system]">
+                <div className="logotype masthead-wordmark flex flex-wrap items-baseline gap-x-1.5 gap-y-0 leading-[1.02] sm:gap-x-2">
+                  <span className="text-4xl font-bold tracking-[-0.03em] text-foreground sm:text-5xl md:text-6xl">
                     La Gazz
                   </span>
-                  <span className="text-[clamp(1.875rem,6vw+0.5rem,3.75rem)] font-semibold text-primary [font-family:-apple-system]">
+                  <span className="text-4xl font-bold tracking-[-0.03em] text-primary sm:text-5xl md:text-6xl">
                     attak
                   </span>
                 </div>
-                <div className="logotype-tagline !max-w-full text-pretty text-sm leading-snug sm:text-base md:text-lg">
+                <div className="logotype-tagline w-full max-w-[42rem] text-pretty text-sm sm:text-base md:text-[1.125rem] md:leading-relaxed">
                   Vos résultats, vos humiliations, votre gloire... ou pas !
                 </div>
               </Link>
