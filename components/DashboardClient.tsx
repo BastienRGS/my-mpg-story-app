@@ -231,13 +231,20 @@ export function DashboardClient({ data }: DashboardClientProps) {
             ) : null}
 
             {/* Masthead (hors carte) */}
-            <div className="mb-4">
-              <Link href="/" className="inline-flex flex-col gap-1.5 py-2">
-                <div className="logotype flex flex-wrap items-baseline gap-0 leading-none">
-                  <span className="text-[60px] font-semibold text-foreground [font-family:-apple-system]">La Gazz</span>
-                  <span className="text-[60px] font-semibold text-primary [font-family:-apple-system]">attak</span>
+            <div className="mb-4 min-w-0">
+              <Link
+                href="/"
+                className="inline-flex min-w-0 max-w-full flex-col gap-1 py-2 sm:gap-1.5"
+              >
+                <div className="logotype flex flex-wrap items-baseline gap-x-1 gap-y-0 leading-[0.95] sm:gap-x-1.5">
+                  <span className="text-[clamp(1.875rem,6vw+0.5rem,3.75rem)] font-semibold text-foreground [font-family:-apple-system]">
+                    La Gazz
+                  </span>
+                  <span className="text-[clamp(1.875rem,6vw+0.5rem,3.75rem)] font-semibold text-primary [font-family:-apple-system]">
+                    attak
+                  </span>
                 </div>
-                <div className="logotype-tagline !max-w-none w-[485px] whitespace-nowrap">
+                <div className="logotype-tagline !max-w-full text-pretty text-sm leading-snug sm:text-base md:text-lg">
                   Vos résultats, vos humiliations, votre gloire... ou pas !
                 </div>
               </Link>

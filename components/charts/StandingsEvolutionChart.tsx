@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, User } from "lucide-react";
 import { useStandingsComparisonSelection } from "@/hooks/useStandingsComparisonSelection";
+import { CHART_LINE_COLORS } from "@/lib/chart-line-colors";
 import { chartLineKey } from "@/lib/standings-comparison";
 import { cn } from "@/lib/utils";
 
@@ -49,8 +50,6 @@ type Props = {
   /** Titre pédagogique masqué (une page apporte le titre) */
   hideHeader?: boolean;
 };
-
-const STROKE_HUES = [210, 145, 35, 280, 175, 0, 320, 190] as const;
 
 export default function StandingsEvolutionChart({
   standings,
@@ -126,14 +125,11 @@ export default function StandingsEvolutionChart({
   const rankDomain = Math.max(managers.length, 2);
   const yTicks = Array.from({ length: rankDomain }, (_, i) => i + 1);
 
-  const strokeFor = (index: number) =>
-    `hsl(${STROKE_HUES[index % STROKE_HUES.length]} 70% 52%)`;
-
   const seriesMeta = visibleManagers.map((m, index) => ({
     id: m.id,
     lineKey: chartLineKey(m.id),
     label: m.name,
-    color: strokeFor(index),
+    color: CHART_LINE_COLORS[index % CHART_LINE_COLORS.length],
   }));
 
   const minChartWidth = isNarrow
