@@ -16,10 +16,11 @@ export type MatchEntryActionState = {
 const MAX_BULK_ROWS = 40
 
 function secretsMatch(provided: string, expected: string | undefined): boolean {
-  if (!expected || expected.length === 0) return false
+  const normalizedExpected = expected?.trim()
+  if (!normalizedExpected || normalizedExpected.length === 0) return false
   try {
-    const a = Buffer.from(provided, "utf8")
-    const b = Buffer.from(expected, "utf8")
+    const a = Buffer.from(provided.trim(), "utf8")
+    const b = Buffer.from(normalizedExpected, "utf8")
     if (a.length !== b.length) return false
     return timingSafeEqual(a, b)
   } catch {
@@ -257,7 +258,7 @@ export async function submitBulkMatchResults(
   _prev: MatchEntryActionState,
   formData: FormData
 ): Promise<MatchEntryActionState> {
-  const expectedSecret = process.env.ADMIN_MATCH_ENTRY_SECRET
+  const expectedSecret = process.env.ADMIN_MATCH_ENTRY_SECRET?.trim()
   if (!expectedSecret) {
     return {
       ok: false,

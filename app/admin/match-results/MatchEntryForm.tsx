@@ -1,6 +1,14 @@
 "use client"
 
-import { useActionState, useCallback, useEffect, useMemo, useState, type FormEvent } from "react"
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react"
 import Link from "next/link"
 import { useFormStatus } from "react-dom"
 import { Plus } from "lucide-react"
@@ -91,6 +99,64 @@ const selectClassName =
 
 const initialState: MatchEntryActionState = { ok: false, message: "" }
 
+const ADMIN_MATCH_DRAFT_PREFIX = "my-mpg-story:admin-match-draft"
+
+type AdminMatchDraftV1 = {
+  v: 1
+  leagueSlug: string
+  seasonId: string
+  matchdayNumber: string
+  numRows: number
+  homeSelections: string[]
+  awaySelections: string[]
+  homeScores: number[]
+  awayScores: number[]
+  homeBonusTypeSelections: string[]
+  awayBonusTypeSelections: string[]
+  homeMirrorOutcomes: string[]
+  awayMirrorOutcomes: string[]
+  homeBonusHighlights: boolean[]
+  awayBonusHighlights: boolean[]
+}
+
+function draftStorageKey(leagueSlug: string, seasonId: string) {
+  return `${ADMIN_MATCH_DRAFT_PREFIX}:${leagueSlug}:${seasonId}`
+}
+
+function padRowArray<T>(arr: unknown[], len: number, fill: T): T[] {
+  const out: T[] = []
+  for (let i = 0; i < len; i++) {
+    const v = arr[i]
+    out.push(v !== undefined && v !== null ? (v as T) : fill)
+  }
+  return out
+}
+
+function clampIntScore(n: unknown): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return 0
+  return Math.max(0, Math.floor(n))
+}
+
+function isAdminMatchDraftV1(x: unknown): x is AdminMatchDraftV1 {
+  if (!x || typeof x !== "object") return false
+  const o = x as Record<string, unknown>
+  if (o.v !== 1) return false
+  if (typeof o.leagueSlug !== "string" || typeof o.seasonId !== "string") return false
+  if (typeof o.matchdayNumber !== "string") return false
+  if (typeof o.numRows !== "number" || !Number.isInteger(o.numRows) || o.numRows < 1 || o.numRows > MAX_ROWS) {
+    return false
+  }
+  const strArr = (a: unknown) => Array.isArray(a) && a.every((i) => typeof i === "string")
+  const numArr = (a: unknown) => Array.isArray(a) && a.every((i) => typeof i === "number" && Number.isFinite(i))
+  const boolArr = (a: unknown) => Array.isArray(a) && a.every((i) => typeof i === "boolean")
+  if (!strArr(o.homeSelections) || !strArr(o.awaySelections)) return false
+  if (!numArr(o.homeScores) || !numArr(o.awayScores)) return false
+  if (!strArr(o.homeBonusTypeSelections) || !strArr(o.awayBonusTypeSelections)) return false
+  if (!strArr(o.homeMirrorOutcomes) || !strArr(o.awayMirrorOutcomes)) return false
+  if (!boolArr(o.homeBonusHighlights) || !boolArr(o.awayBonusHighlights)) return false
+  return true
+}
+
 function SubmitButton({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus()
   return (
@@ -133,20 +199,24 @@ function bonusRowTitle(side: "home" | "away", teamId: string, teams: { id: strin
 function MirrorOutcomeSelect({
   prefix,
   rowIndex,
+  value,
+  onChange,
 }: {
   prefix: "home" | "away"
   rowIndex: number
+  value: string
+  onChange: (value: string) => void
 }) {
   const name = `${prefix}_bonus_outcome_${rowIndex}`
   return (
     <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
       <span className="text-sm text-muted-foreground sm:mt-2 sm:w-32 sm:shrink-0">Résultat</span>
       <select
-        key={`${prefix}-${rowIndex}-miroir`}
         id={name}
         name={name}
         className={`${selectClassName} sm:flex-1`}
-        defaultValue=""
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
       >
         <option value="">— Choisir —</option>
         <option value="mirror_wasted">Miroir inutile</option>
@@ -163,12 +233,16 @@ function BonusOutcomeBlock({
   bonusType,
   homeScore,
   awayScore,
+  mirrorOutcome,
+  onMirrorOutcomeChange,
 }: {
   prefix: "home" | "away"
   rowIndex: number
   bonusType: string
   homeScore: number
   awayScore: number
+  mirrorOutcome: string
+  onMirrorOutcomeChange: (value: string) => void
 }) {
   const name = `${prefix}_bonus_outcome_${rowIndex}`
   const bt = bonusType.trim().toLowerCase()
@@ -176,7 +250,12 @@ function BonusOutcomeBlock({
   if (bt === "miroir") {
     return (
       <div className="border-l-2 border-muted/80 pl-3 sm:ml-[calc(8rem+0.75rem)]">
-        <MirrorOutcomeSelect prefix={prefix} rowIndex={rowIndex} />
+        <MirrorOutcomeSelect
+          prefix={prefix}
+          rowIndex={rowIndex}
+          value={mirrorOutcome}
+          onChange={onMirrorOutcomeChange}
+        />
       </div>
     )
   }
@@ -196,6 +275,7 @@ function BonusOutcomeBlock({
 
 export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProps) {
   const [state, formAction] = useActionState(submitBulkMatchResults, initialState)
+  const [matchdayNumber, setMatchdayNumber] = useState("")
   const [numRows, setNumRows] = useState(DEFAULT_ROWS)
   const [homeSelections, setHomeSelections] = useState<string[]>(() => Array(DEFAULT_ROWS).fill(""))
   const [awaySelections, setAwaySelections] = useState<string[]>(() => Array(DEFAULT_ROWS).fill(""))
@@ -207,6 +287,14 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
   const [awayBonusTypeSelections, setAwayBonusTypeSelections] = useState<string[]>(() =>
     Array(DEFAULT_ROWS).fill("")
   )
+  const [homeMirrorOutcomes, setHomeMirrorOutcomes] = useState<string[]>(() => Array(DEFAULT_ROWS).fill(""))
+  const [awayMirrorOutcomes, setAwayMirrorOutcomes] = useState<string[]>(() => Array(DEFAULT_ROWS).fill(""))
+  const [homeBonusHighlights, setHomeBonusHighlights] = useState<boolean[]>(() =>
+    Array(DEFAULT_ROWS).fill(false)
+  )
+  const [awayBonusHighlights, setAwayBonusHighlights] = useState<boolean[]>(() =>
+    Array(DEFAULT_ROWS).fill(false)
+  )
 
   const activeLeague = useMemo(
     () => leagueOptions.find((l) => l.slug === leagueSlug),
@@ -216,15 +304,131 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
   const seasonId = activeLeague?.seasonId ?? ""
   const canSubmit = teams.length >= 2 && Boolean(seasonId)
 
+  const applyEmptyGrid = useCallback((rows: number) => {
+    const n = Math.min(MAX_ROWS, Math.max(1, rows))
+    setNumRows(n)
+    setHomeSelections(Array(n).fill(""))
+    setAwaySelections(Array(n).fill(""))
+    setHomeScores(Array(n).fill(0))
+    setAwayScores(Array(n).fill(0))
+    setHomeBonusTypeSelections(Array(n).fill(""))
+    setAwayBonusTypeSelections(Array(n).fill(""))
+    setHomeMirrorOutcomes(Array(n).fill(""))
+    setAwayMirrorOutcomes(Array(n).fill(""))
+    setHomeBonusHighlights(Array(n).fill(false))
+    setAwayBonusHighlights(Array(n).fill(false))
+  }, [])
+
   useEffect(() => {
-    setNumRows(DEFAULT_ROWS)
-    setHomeSelections(Array(DEFAULT_ROWS).fill(""))
-    setAwaySelections(Array(DEFAULT_ROWS).fill(""))
-    setHomeScores(Array(DEFAULT_ROWS).fill(0))
-    setAwayScores(Array(DEFAULT_ROWS).fill(0))
-    setHomeBonusTypeSelections(Array(DEFAULT_ROWS).fill(""))
-    setAwayBonusTypeSelections(Array(DEFAULT_ROWS).fill(""))
-  }, [leagueSlug])
+    const defaults = () => {
+      setMatchdayNumber("")
+      applyEmptyGrid(DEFAULT_ROWS)
+    }
+    if (!seasonId) {
+      defaults()
+      return
+    }
+    let parsed: unknown
+    try {
+      const raw = localStorage.getItem(draftStorageKey(leagueSlug, seasonId))
+      if (!raw) {
+        defaults()
+        return
+      }
+      parsed = JSON.parse(raw) as unknown
+    } catch {
+      defaults()
+      return
+    }
+    if (
+      !isAdminMatchDraftV1(parsed) ||
+      parsed.leagueSlug !== leagueSlug ||
+      parsed.seasonId !== seasonId
+    ) {
+      defaults()
+      return
+    }
+    const n = Math.min(MAX_ROWS, Math.max(1, Math.floor(parsed.numRows)))
+    setMatchdayNumber(parsed.matchdayNumber)
+    setNumRows(n)
+    setHomeSelections(padRowArray(parsed.homeSelections as unknown[], n, "").map(String))
+    setAwaySelections(padRowArray(parsed.awaySelections as unknown[], n, "").map(String))
+    setHomeScores(padRowArray(parsed.homeScores as unknown[], n, 0).map(clampIntScore))
+    setAwayScores(padRowArray(parsed.awayScores as unknown[], n, 0).map(clampIntScore))
+    setHomeBonusTypeSelections(padRowArray(parsed.homeBonusTypeSelections as unknown[], n, "").map(String))
+    setAwayBonusTypeSelections(padRowArray(parsed.awayBonusTypeSelections as unknown[], n, "").map(String))
+    setHomeMirrorOutcomes(padRowArray(parsed.homeMirrorOutcomes as unknown[], n, "").map(String))
+    setAwayMirrorOutcomes(padRowArray(parsed.awayMirrorOutcomes as unknown[], n, "").map(String))
+    setHomeBonusHighlights(padRowArray(parsed.homeBonusHighlights as unknown[], n, false).map(Boolean))
+    setAwayBonusHighlights(padRowArray(parsed.awayBonusHighlights as unknown[], n, false).map(Boolean))
+  }, [leagueSlug, seasonId, applyEmptyGrid])
+
+  const saveDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!seasonId) return
+    if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current)
+    saveDraftTimerRef.current = setTimeout(() => {
+      try {
+        const payload: AdminMatchDraftV1 = {
+          v: 1,
+          leagueSlug,
+          seasonId,
+          matchdayNumber,
+          numRows,
+          homeSelections,
+          awaySelections,
+          homeScores,
+          awayScores,
+          homeBonusTypeSelections,
+          awayBonusTypeSelections,
+          homeMirrorOutcomes,
+          awayMirrorOutcomes,
+          homeBonusHighlights,
+          awayBonusHighlights,
+        }
+        localStorage.setItem(draftStorageKey(leagueSlug, seasonId), JSON.stringify(payload))
+      } catch {
+        /* quota ou mode privé */
+      }
+      saveDraftTimerRef.current = null
+    }, 400)
+    return () => {
+      if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current)
+    }
+  }, [
+    seasonId,
+    leagueSlug,
+    matchdayNumber,
+    numRows,
+    homeSelections,
+    awaySelections,
+    homeScores,
+    awayScores,
+    homeBonusTypeSelections,
+    awayBonusTypeSelections,
+    homeMirrorOutcomes,
+    awayMirrorOutcomes,
+    homeBonusHighlights,
+    awayBonusHighlights,
+  ])
+
+  const successCleanupDone = useRef(false)
+  useEffect(() => {
+    if (!state.ok) {
+      successCleanupDone.current = false
+      return
+    }
+    if (successCleanupDone.current) return
+    successCleanupDone.current = true
+    const slugForDraft = state.leagueSlug ?? leagueSlug
+    try {
+      if (seasonId) localStorage.removeItem(draftStorageKey(slugForDraft, seasonId))
+    } catch {
+      /* ignore */
+    }
+    setMatchdayNumber("")
+    applyEmptyGrid(DEFAULT_ROWS)
+  }, [state.ok, state.leagueSlug, leagueSlug, seasonId, applyEmptyGrid])
 
   useEffect(() => {
     setHomeSelections((h) => {
@@ -249,6 +453,22 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
     })
     setAwayBonusTypeSelections((b) => {
       if (numRows > b.length) return [...b, ...Array(numRows - b.length).fill("")]
+      return b.slice(0, numRows)
+    })
+    setHomeMirrorOutcomes((b) => {
+      if (numRows > b.length) return [...b, ...Array(numRows - b.length).fill("")]
+      return b.slice(0, numRows)
+    })
+    setAwayMirrorOutcomes((b) => {
+      if (numRows > b.length) return [...b, ...Array(numRows - b.length).fill("")]
+      return b.slice(0, numRows)
+    })
+    setHomeBonusHighlights((b) => {
+      if (numRows > b.length) return [...b, ...Array(numRows - b.length).fill(false)]
+      return b.slice(0, numRows)
+    })
+    setAwayBonusHighlights((b) => {
+      if (numRows > b.length) return [...b, ...Array(numRows - b.length).fill(false)]
       return b.slice(0, numRows)
     })
   }, [numRows])
@@ -306,7 +526,8 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
         />
         <p className="text-xs text-muted-foreground">
           Même valeur que <code className="rounded bg-muted px-1">ADMIN_MATCH_ENTRY_SECRET</code> dans
-          .env.local — ne la partagez pas.
+          .env.local — ne la partagez pas. Le secret n’est pas mémorisé ; le reste du formulaire est
+          sauvegardé automatiquement dans ce navigateur (rechargement ou mauvais code inclus).
         </p>
       </div>
 
@@ -337,6 +558,8 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
             type="number"
             min={1}
             required
+            value={matchdayNumber}
+            onChange={(e) => setMatchdayNumber(e.target.value)}
             className="max-w-[8rem]"
           />
           <p className="text-xs text-muted-foreground">
@@ -426,15 +649,15 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
                           Buts A
                         </Label>
                         <Input
-                          key={`home-sc-${leagueSlug}-${i}`}
                           id={`home_score_${i}`}
                           name={`home_score_${i}`}
                           type="number"
                           min={0}
                           inputMode="numeric"
-                          defaultValue={0}
+                          value={!homeVal && !awayVal ? "" : String(hs)}
                           onChange={(e) => {
-                            const v = parseScore(e.target.value)
+                            const raw = e.target.value
+                            const v = raw === "" ? 0 : parseScore(raw)
                             setHomeScores((prev) => {
                               const next = [...prev]
                               next[i] = v
@@ -449,15 +672,15 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
                           Buts B
                         </Label>
                         <Input
-                          key={`away-sc-${leagueSlug}-${i}`}
                           id={`away_score_${i}`}
                           name={`away_score_${i}`}
                           type="number"
                           min={0}
                           inputMode="numeric"
-                          defaultValue={0}
+                          value={!homeVal && !awayVal ? "" : String(asco)}
                           onChange={(e) => {
-                            const v = parseScore(e.target.value)
+                            const raw = e.target.value
+                            const v = raw === "" ? 0 : parseScore(raw)
                             setAwayScores((prev) => {
                               const next = [...prev]
                               next[i] = v
@@ -535,12 +758,29 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
                             bonusType={homeBt}
                             homeScore={hs}
                             awayScore={asco}
+                            mirrorOutcome={homeMirrorOutcomes[i] ?? ""}
+                            onMirrorOutcomeChange={(v) => {
+                              setHomeMirrorOutcomes((prev) => {
+                                const next = [...prev]
+                                next[i] = v
+                                return next
+                              })
+                            }}
                           />
                           <label className="flex cursor-pointer items-start gap-2 pt-1 sm:ml-[calc(8rem+0.75rem)]">
                             <input
                               type="checkbox"
                               name={`home_bonus_highlight_${i}`}
                               value="on"
+                              checked={homeBonusHighlights[i] ?? false}
+                              onChange={(e) => {
+                                const checked = e.target.checked
+                                setHomeBonusHighlights((prev) => {
+                                  const next = [...prev]
+                                  next[i] = checked
+                                  return next
+                                })
+                              }}
                               className="mt-1 size-4 shrink-0 rounded border border-input accent-primary"
                             />
                             <span className="text-xs text-muted-foreground leading-snug">
@@ -585,12 +825,29 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
                             bonusType={awayBt}
                             homeScore={hs}
                             awayScore={asco}
+                            mirrorOutcome={awayMirrorOutcomes[i] ?? ""}
+                            onMirrorOutcomeChange={(v) => {
+                              setAwayMirrorOutcomes((prev) => {
+                                const next = [...prev]
+                                next[i] = v
+                                return next
+                              })
+                            }}
                           />
                           <label className="flex cursor-pointer items-start gap-2 pt-1 sm:ml-[calc(8rem+0.75rem)]">
                             <input
                               type="checkbox"
                               name={`away_bonus_highlight_${i}`}
                               value="on"
+                              checked={awayBonusHighlights[i] ?? false}
+                              onChange={(e) => {
+                                const checked = e.target.checked
+                                setAwayBonusHighlights((prev) => {
+                                  const next = [...prev]
+                                  next[i] = checked
+                                  return next
+                                })
+                              }}
                               className="mt-1 size-4 shrink-0 rounded border border-input accent-primary"
                             />
                             <span className="text-xs text-muted-foreground leading-snug">

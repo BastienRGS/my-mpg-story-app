@@ -32,7 +32,7 @@ export default async function AdminMatchResultsPage() {
   )
 
   const formEnabled = Boolean(
-    process.env.ADMIN_MATCH_ENTRY_SECRET && process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.ADMIN_MATCH_ENTRY_SECRET?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
   /** Première ligue renvoyée par Supabase (`listLeagues` / `order`). */
