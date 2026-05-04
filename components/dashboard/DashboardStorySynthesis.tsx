@@ -27,7 +27,7 @@ function NarrativeSubsection({
 }) {
   return (
     <div className={cn("space-y-2", withTopBorder && "mb-0 border-t border-border/60")}>
-      <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{kicker}</h3>
+      <h3 className="text-xs font-bold uppercase tracking-wide text-[rgba(61,220,132,1)]">{kicker}</h3>
       {children}
     </div>
   )

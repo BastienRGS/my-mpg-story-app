@@ -325,6 +325,14 @@ function formWdlCounts(form: string | null | undefined): { w: number; d: number;
   return { w, d, l }
 }
 
+/** Détail narratif : victoires chiffrées sur les N derniers matchs (N = longueur de la chaîne WDL en base). */
+function formRecentDetailFromWdl(form: string, wins: number, lastMd: number): string {
+  const n = Math.max(form.length, 1)
+  const v = `${wins} victoire${wins === 1 ? "" : "s"}`
+  const scope = n === 1 ? "sur le dernier match disputé" : `sur les ${n} derniers matchs`
+  return `Forme récente : ${v} ${scope} (après la J${lastMd}).`
+}
+
 /** Compare form tuples : meilleur = plus de V, puis de N, puis moins de D. */
 function compareFormBest(
   a: { w: number; d: number; l: number },
@@ -447,7 +455,7 @@ export function computeFormExtremeCoaches(
       title: "Coach en feu",
       managerName: bestMgr.name,
       teamLabel: bestLabel,
-      detail: `Forme récente : ${bestScored.form || "—"} (après la J${lastMd}).`,
+      detail: formRecentDetailFromWdl(bestScored.form, bestScored.counts.w, lastMd),
       hasData: true,
       loreSubtitle: loreSubtitleForKpi("hot_coach", bestLabel),
     },
@@ -456,7 +464,7 @@ export function computeFormExtremeCoaches(
       title: "Coach en crise",
       managerName: worstMgr.name,
       teamLabel: worstLabel,
-      detail: `Forme récente : ${worstScored.form || "—"} (après la J${lastMd}).`,
+      detail: formRecentDetailFromWdl(worstScored.form, worstScored.counts.w, lastMd),
       hasData: true,
       loreSubtitle: loreSubtitleForKpi("crisis_coach", worstLabel),
     },

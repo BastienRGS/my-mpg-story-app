@@ -79,11 +79,11 @@ export function MatchdayNarrativeBonusSection({ bonusHighlight, variant = "dashb
           "text-xs font-bold uppercase tracking-wide",
           paper
             ? "section-label border-l-4 pl-3 font-extrabold"
-            : "text-muted-foreground"
+            : "text-[rgba(61,220,132,1)]"
         )}
         style={paper ? { borderColor: "#3ddc84" } : undefined}
       >
-        🎰 {bonusHighlight.title}
+        {bonusHighlight.title}
       </h3>
       <div className="flex flex-col gap-2">
         {bonusHighlight.entries.map((e, idx) => {

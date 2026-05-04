@@ -53,7 +53,7 @@ export function DashboardStoryHero({
           </p>
         </div>
 
-        <p className="max-w-2xl text-pretty text-sm leading-relaxed text-zinc-300 sm:text-base">{dek}</p>
+        <p className="max-w-2xl text-pretty text-sm leading-relaxed text-white sm:text-base">{dek}</p>
 
         <DashboardSynthesisInner paragraphs={synthesisParagraphs} bonusHighlight={bonusHighlight} />
       </div>

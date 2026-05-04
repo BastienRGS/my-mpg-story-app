@@ -58,7 +58,7 @@ export function LeagueStoryKpiCard({ kpi, compact }: { kpi: LeagueStoryKpi; comp
         <div className="min-w-0 flex-1">
           <p
             className={cn(
-              "font-semibold uppercase tracking-[0.2em] text-[#3ddc84]",
+              "font-semibold uppercase tracking-[0.2em] text-[rgba(61,220,132,1)]",
               compact ? "text-[10px] sm:text-[11px]" : "text-[11px]"
             )}
           >
