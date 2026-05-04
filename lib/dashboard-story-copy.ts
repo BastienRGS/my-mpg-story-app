@@ -146,25 +146,6 @@ export function buildEditorialHeadlineSegments(params: {
   ]
 }
 
-export function buildDashboardHeroDek(params: {
-  managers: ManagerWithTeam[]
-  standingsHistory: StandingsHistoryWithManager[]
-  matchdayNumber: number
-}): string {
-  const { managers, standingsHistory, matchdayNumber } = params
-  const rows = standingsHistory.filter((r) => r.matchday_number === matchdayNumber)
-  if (rows.length === 0) {
-    return "Le championnat écrit son histoire match après match — prochaine mise à jour après les résultats."
-  }
-  const leaderRow = rows.find((r) => r.rank === 1)
-  const lanterne = rows.reduce((a, b) => (b.rank > a.rank ? b : a), rows[0])
-  const leaderMgr = leaderRow ? managers.find((m) => m.id === leaderRow.manager_id) : undefined
-  const lanterneMgr = lanterne ? managers.find((m) => m.id === lanterne.manager_id) : undefined
-  const leader = leaderMgr ? displayName(leaderMgr) : "—"
-  const last = lanterneMgr ? displayName(lanterneMgr) : "—"
-  return `${leader} mène la danse, tandis qu’en bas de tableau ${last} cherche l’étincelle. Chaque journée peut tout renverser.`
-}
-
 export function buildDashboardSynthesisParagraphs(params: {
   managers: ManagerWithTeam[]
   standingsHistory: StandingsHistoryWithManager[]

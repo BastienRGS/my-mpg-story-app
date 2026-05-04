@@ -15,11 +15,11 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { DashboardData } from "@/lib/types"
 import {
-  buildDashboardHeroDek,
   buildEditorialHeadlineSegments,
   buildDashboardSynthesisParagraphs,
   type StoryTextSegment,
 } from "@/lib/dashboard-story-copy"
+import { buildDynamicHeadline } from "@/lib/matchday-newspaper"
 import {
   computeFormExtremeCoaches,
   computeLeaderStripKpi,
@@ -47,11 +47,13 @@ export function DashboardClient({ data }: DashboardClientProps) {
     currentMatchday,
     matchdayPunchlineFromTable,
     bonusHighlight,
+    matchdayHighlightedBonuses,
   } = data
 
   const lastMdFromStandings =
     standingsHistory.length > 0 ? Math.max(...standingsHistory.map((s) => s.matchday_number)) : null
   const matchdayNumber = currentMatchday?.number ?? lastMdFromStandings ?? 1
+  const totalMatchdaysForSeason = season?.total_matchdays ?? 12
 
   const ready = matchDataStatus === "ready"
 
@@ -83,28 +85,44 @@ export function DashboardClient({ data }: DashboardClientProps) {
     [ready, validatedMatchRows, matchdayNumber]
   )
 
-  const heroSegments = useMemo(
-    () =>
-      buildEditorialHeadlineSegments({
-        leagueName: league?.name ?? "La ligue",
-        matchdayNumber,
-        matchdayTitle: currentMatchday?.title,
-        managers,
-        standingsHistory,
-        validatedMatchRows: ready ? validatedMatchRows : [],
-      }),
-    [league?.name, matchdayNumber, currentMatchday?.title, managers, standingsHistory, ready, validatedMatchRows]
-  )
-
-  const heroDek = useMemo(
-    () =>
-      buildDashboardHeroDek({
-        managers,
-        standingsHistory,
-        matchdayNumber,
-      }),
-    [managers, standingsHistory, matchdayNumber]
-  )
+  const { heroSegments, heroDek } = useMemo((): { heroSegments: StoryTextSegment[]; heroDek: string } => {
+    if (!ready) {
+      return {
+        heroSegments: buildEditorialHeadlineSegments({
+          leagueName: league?.name ?? "La ligue",
+          matchdayNumber,
+          matchdayTitle: currentMatchday?.title,
+          managers,
+          standingsHistory,
+          validatedMatchRows: [],
+        }),
+        heroDek:
+          "Le championnat écrit son histoire match après match — prochaine mise à jour après les résultats.",
+      }
+    }
+    const dyn = buildDynamicHeadline({
+      matchdayNumber,
+      totalMatchdays: totalMatchdaysForSeason,
+      seasonName: season?.name ?? "",
+      managers,
+      standingsHistory,
+      validatedMatchRows,
+      highlightedBonusesThisMatchday: matchdayHighlightedBonuses,
+    })
+    return { heroSegments: [{ text: dyn.headline }], heroDek: dyn.intro }
+  }, [
+    ready,
+    league?.name,
+    matchdayNumber,
+    currentMatchday?.title,
+    managers,
+    standingsHistory,
+    validatedMatchRows,
+    totalMatchdaysForSeason,
+    season?.name,
+    season?.total_matchdays,
+    matchdayHighlightedBonuses,
+  ])
 
   const synthesisParagraphs = useMemo((): [StoryTextSegment[], StoryTextSegment[], StoryTextSegment[]] => {
     if (!ready) {

@@ -39,12 +39,12 @@ export function HeroHeadline({
   const underPressure = lastPlaceStanding?.manager?.name || "À déterminer"
 
   const matchdayNumber = currentMatchday?.number || latestMatchday || 1
-  const totalMatchdays = 38
+  const totalMatchdays = season.total_matchdays ?? 12
   const mdStatus = currentMatchday?.status ?? null
 
   const headline =
     currentMatchday?.title || `Après la J${matchdayNumber}, le récit continue`
-  const summary = `${leader} mène la danse. En bas de tableau, ${underPressure} vit au rythme des contre-performances — et chaque journée peut tout renverser.`
+  const summary = `${leader} caracole en tête du classement. ${underPressure} subit la pression en bas du tableau — et chaque journée peut tout renverser.`
 
   return (
     <section className="space-y-4 sm:space-y-5">

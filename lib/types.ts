@@ -26,6 +26,7 @@ export interface Season {
   name: string
   is_current: boolean | null
   created_at: string | null
+  total_matchdays: number | null
 }
 
 export interface Manager {
@@ -228,4 +229,18 @@ export interface DashboardData {
   matchdayPunchlineFromTable: string | null
   /** Bonus MPG saisi pour la journée courante (au plus un bloc narratif priorisé). */
   bonusHighlight: BonusHighlightBlock | null
+  /** Nombre max de journées prévues (calendrier `matchdays`) pour fin de saison / titres dynamiques. */
+  totalMatchdays: number
+  /**
+   * Bonus `highlight = true` pour la journée courante (brut, avant agrégation narrative).
+   * Même lot que celui passé à `computeMatchdayBonusHighlight`.
+   */
+  matchdayHighlightedBonuses: Array<{
+    match_id: string
+    manager_id: string
+    bonus_type: string
+    bonus_outcome: string
+    created_at?: string | null
+    highlight?: boolean | null
+  }>
 }

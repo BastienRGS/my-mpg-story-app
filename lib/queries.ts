@@ -92,12 +92,18 @@ export async function resolveDashboardLeague(leagueSlug?: string | null): Promis
   return leagues[0]
 }
 
+const SEASON_SELECT = 'id, name, is_current, league_id, total_matchdays'
+
+export function getTotalMatchdaysFromSeason(season: Season | null): number {
+  return season?.total_matchdays ?? 12
+}
+
 export async function getCurrentSeason(leagueId: string): Promise<Season | null> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('seasons')
-    .select('*')
+    .select(SEASON_SELECT)
     .eq('league_id', leagueId)
     .eq('is_current', true)
     .limit(1)
@@ -111,7 +117,7 @@ export async function getCurrentSeason(leagueId: string): Promise<Season | null>
 
   const { data: fallback, error: fallbackError } = await supabase
     .from('seasons')
-    .select('*')
+    .select(SEASON_SELECT)
     .eq('league_id', leagueId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -786,6 +792,8 @@ function emptyDashboard(
     currentMatchday: null,
     matchdayPunchlineFromTable: null,
     bonusHighlight: null,
+    totalMatchdays: 12,
+    matchdayHighlightedBonuses: [],
     ...overrides,
   }
 }
@@ -831,6 +839,7 @@ export async function getDashboardData(
   let currentMatchday: Matchday | null = null
   let matchdayPunchlineFromTable: string | null = null
   let bonusHighlight: BonusHighlightBlock | null = null
+  let matchdayHighlightedBonuses: Awaited<ReturnType<typeof getHighlightedMatchBonusesForMatchIds>> = []
 
   if (matchesLoadError) {
     matchDataStatus = 'load_error'
@@ -870,6 +879,7 @@ export async function getDashboardData(
     const mdNum = currentMatchday.number
     const idsThisMd = matchResults.filter((r) => r.matchday_number === mdNum).map((r) => r.id)
     const bonusRows = await getHighlightedMatchBonusesForMatchIds(idsThisMd)
+    matchdayHighlightedBonuses = bonusRows
     bonusHighlight = computeMatchdayBonusHighlight(bonusRows, managers)
   }
 
@@ -889,5 +899,7 @@ export async function getDashboardData(
     currentMatchday,
     matchdayPunchlineFromTable,
     bonusHighlight,
+    totalMatchdays: getTotalMatchdaysFromSeason(season),
+    matchdayHighlightedBonuses,
   }
 }
