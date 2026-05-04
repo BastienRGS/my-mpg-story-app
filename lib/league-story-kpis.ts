@@ -154,6 +154,17 @@ export function computeLeagueStoryKpis(
     }
   }
 
+  // Aucun mouvement de places (ou pas de J précédente) : même lecture que « la dernière journée » — forme W/D/L cumulée affichée sur le classement.
+  if (!hot.hasData || !crisis.hasData) {
+    const formExtremes = computeFormExtremeCoaches(managers, standingsHistory)
+    if (!hot.hasData && formExtremes.best.hasData) {
+      hot = formExtremes.best
+    }
+    if (!crisis.hasData && formExtremes.worst.hasData) {
+      crisis = formExtremes.worst
+    }
+  }
+
   // --- Plus grosse remontée : depuis la première journée suivie ---
   let comeback: LeagueStoryKpi = empty("comeback", "Plus grosse remontée")
   if (firstMd != null && lastMd != null && firstMd !== lastMd) {
