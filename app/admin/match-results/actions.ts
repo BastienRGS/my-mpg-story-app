@@ -135,13 +135,15 @@ async function upsertMatch(
 
 const STANDARD_BONUS_OUTCOMES = new Set(["win", "loss_or_draw"])
 const MIROIR_OUTCOMES = new Set(["mirror_wasted", "mirror_genius", "mirror_draw"])
-const VALISE_OUTCOMES = new Set(["win", "no_goal_to_cancel"])
 
+/** Aligné sur `computeAutoBonusOutcome` (formulaire) : valise = win | loss_or_draw | no_goal_to_cancel. */
 function isValidBonusOutcome(bonusType: string, outcome: string): boolean {
   const t = bonusType.toLowerCase()
   const o = outcome.toLowerCase()
   if (t === "miroir") return MIROIR_OUTCOMES.has(o)
-  if (t === "valise_nanard") return VALISE_OUTCOMES.has(o)
+  if (t === "valise_nanard") {
+    return STANDARD_BONUS_OUTCOMES.has(o) || o === "no_goal_to_cancel"
+  }
   return STANDARD_BONUS_OUTCOMES.has(o)
 }
 

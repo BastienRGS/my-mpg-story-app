@@ -96,6 +96,9 @@ export function getBonusNarrative(
     } else if (o === "no_goal_to_cancel") {
       raw =
         "Il a sorti la valise pour rien.\nPas de but à annuler, 5M envolés,\net la défaite en prime. Looser !"
+    } else if (o === "loss_or_draw") {
+      raw =
+        "La valise est sortie, mais le but adverse reste.\nPas assez fort pour renverser le match.\n5M dépensés pour pas grand-chose."
     }
   } else if (b === "mcdo_plus") {
     if (o === "win") {
