@@ -18,9 +18,11 @@ import { computeStandingsHistoryFromMatches, maxMatchdayFromMatches } from '@/li
 import { validateSeasonMatchResults } from '@/lib/match-results-validation'
 import {
   getLoreForCoach,
+  getManagerSeasonCount,
   getPalmarèsCountsForTeam,
+  normalizeTeamName,
+  PALMARES,
   resolveSeason10RosterTeamDivision,
-  resolveTeamKey,
 } from '@/lib/league-lore'
 import type { BonusHighlightBlock } from '@/lib/types'
 import {
@@ -183,33 +185,94 @@ export async function getStandingsHistory(seasonId: string): Promise<StandingsHi
 type PalmarèsCounts = ManagerCard['palmares']
 
 /**
- * Phrase d’accroche (1 ligne) pour la carte manager — règles éditoriales JAKATTAK.
- * Générée ici pour garder `getManagersWithStats` autonome côté narratif.
+ * Lore nominative (carte managers) — comparaison sur `identity_label` normalisé.
  */
-function buildManagerLoreDescription(teamName: string, palmares: PalmarèsCounts): string {
-  const key = resolveTeamKey(teamName)
-  if (key === 'golden_roosters') {
-    return '5 titres, une domination sans partage. La Mafia Rolandèse plane sur chaque journée.'
+function namedManagerLoreDescription(teamName: string): string | null {
+  const n = normalizeTeamName(teamName)
+  if (n === normalizeTeamName('Jakattak')) {
+    return 'Le Fondateur, exilé en L2 en S7, de retour pour récupérer son trône.'
   }
-  if (key === 'jakattak') {
-    return 'Fondateur de la ligue, exilé en L2 en S7, de retour pour récupérer son trône.'
+  if (n === normalizeTeamName('Golden Roosters')) {
+    return '5 titres, une domination sans partage. La dynastie Rolandesque plane encore sur chaque journée de championnat.'
   }
-  if (key === 'bab_olympique') {
-    return "Premier champion de l'histoire, le fantôme du passé cherche son retour en L1."
-  }
-  if (key === 'madeinviet') {
-    return 'Champion en S8, relégué en S9. Le champion déchu veut sa revanche.'
-  }
-  if (key === 'deepblue') {
+  if (n === normalizeTeamName('Deepblue')) {
     return "Yo-yo perpétuel entre L1 et L2. La régularité n'est pas son fort."
   }
-  if (palmares.l1Titles >= 2) {
-    return `${palmares.l1Titles} titres L1 au compteur : une domination qui pèse sur toute la ligue.`
+  if (n === normalizeTeamName('Bab olympique')) {
+    return "Premier champion de l'histoire, le fantôme du passé cherche son retour en L1."
   }
-  if (palmares.relegations >= 2) {
-    return `${palmares.relegations} relégations en L1 : une trajectoire faite de hauts et de bas.`
+  if (n === normalizeTeamName('Madinviet')) {
+    return "Champion en S8, relégué en S9. Est-ce une anomalie statistique ou un champion déchu qui aura sa revanche ?"
   }
-  return `${teamName} construit sa légende, journée après journée.`
+  return null
+}
+
+/**
+ * Phrase d’accroche (1 ligne) pour la carte manager — règles éditoriales JAKATTAK.
+ * `managerIndex` = position dans le tableau **trié** (L1 par rang, puis L2 par rang).
+ */
+function buildManagerLoreDescription(
+  teamName: string,
+  palmares: PalmarèsCounts,
+  coachName: string,
+  managerIndex: number
+): string {
+  const named = namedManagerLoreDescription(teamName)
+  if (named) return named
+
+  const seasonsPlayed = getManagerSeasonCount(teamName, PALMARES)
+  const even = managerIndex % 2 === 0
+
+  if (palmares.l1Titles >= 1) {
+    return even
+      ? "Champion de L1. La preuve que les outsiders peuvent aussi écrire l'histoire."
+      : "Un titre L1 au palmarès. Pas le plus attendu, mais le plus mérité."
+  }
+
+  if (palmares.l2Titles >= 1 && palmares.l1Titles === 0) {
+    return even
+      ? 'Un titre L2 en poche. Le vrai défi commence en L1.'
+      : "Le titre L2, c'est fait. Maintenant il faut confirmer là où ça compte vraiment."
+  }
+
+  if (seasonsPlayed >= 3 && palmares.l1Titles === 0 && palmares.l2Titles === 0) {
+    return even
+      ? "Pour l'instant, la salle des trophées sert surtout de débarras."
+      : 'Le trophée se fait attendre. La vitrine est prête mais prend la poussière.'
+  }
+
+  if (seasonsPlayed <= 2 && palmares.l1Titles === 0 && palmares.l2Titles === 0) {
+    return even
+      ? `${coachName} construit sa légende, journée après journée.`
+      : 'Toujours en quête du premier sacre.'
+  }
+
+  return even
+    ? `${coachName} construit sa légende, journée après journée.`
+    : 'Toujours en quête du premier sacre.'
+}
+
+function compareManagerCardsForDisplay(a: ManagerCard, b: ManagerCard): number {
+  if (a.currentLeague !== b.currentLeague) {
+    return a.currentLeague === 'L1' ? -1 : 1
+  }
+  const ra = a.rank
+  const rb = b.rank
+  if (ra === null && rb === null) return 0
+  if (ra === null) return 1
+  if (rb === null) return -1
+  return ra - rb
+}
+
+function sortManagerCardsForDisplay(cards: ManagerCard[]): ManagerCard[] {
+  return [...cards].sort(compareManagerCardsForDisplay)
+}
+
+function finalizeManagerCardLoreDescriptions(sortedCards: ManagerCard[]): ManagerCard[] {
+  return sortedCards.map((m, index) => ({
+    ...m,
+    loreDescription: buildManagerLoreDescription(m.loreTeamName, m.palmares, m.coachName, index),
+  }))
 }
 
 /**
@@ -241,7 +304,7 @@ export async function getManagersWithStats(
     }
   }
 
-  return managers.map((m) => {
+  const cards = managers.map((m) => {
     const coachName = m.name
     const teamName = (m.identity_label ?? '').trim()
     const loreTeamName =
@@ -259,6 +322,7 @@ export async function getManagersWithStats(
       name: m.name,
       coachName,
       teamName,
+      loreTeamName,
       currentLeague,
       rank: row?.rank ?? null,
       points: row?.points ?? null,
@@ -269,10 +333,12 @@ export async function getManagersWithStats(
       winStreak: row?.win_streak ?? 0,
       loseStreak: row?.lose_streak ?? 0,
       loreTag: getLoreForCoach(loreTeamName),
-      loreDescription: buildManagerLoreDescription(loreTeamName, palmares),
+      loreDescription: null,
       palmares,
     }
   })
+
+  return finalizeManagerCardLoreDescriptions(sortManagerCardsForDisplay(cards))
 }
 
 /** Slugs Supabase des deux divisions JAKATTAK (page `/managers` multiligue). */
@@ -295,19 +361,8 @@ export async function getAllManagersWithStats(): Promise<ManagerCard[]> {
   )
 
   const merged = chunks.flat()
-  merged.sort((a, b) => {
-    if (a.currentLeague !== b.currentLeague) {
-      return a.currentLeague === 'L1' ? -1 : 1
-    }
-    const ra = a.rank
-    const rb = b.rank
-    if (ra === null && rb === null) return 0
-    if (ra === null) return 1
-    if (rb === null) return -1
-    return ra - rb
-  })
-
-  return merged
+  const sorted = sortManagerCardsForDisplay(merged)
+  return finalizeManagerCardLoreDescriptions(sorted)
 }
 
 /**

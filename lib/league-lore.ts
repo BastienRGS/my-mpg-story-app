@@ -264,6 +264,31 @@ export function getPalmarèsCountsForTeam(teamName: string): {
   return { l1Titles, l2Titles, relegations, promotions }
 }
 
+function normalizedPalmarèsEquals(teamName: string, candidate: string): boolean {
+  return normalizeTeamName(teamName) === normalizeTeamName(candidate)
+}
+
+function teamAppearsInPalmarèsSeason(teamName: string, entry: PalmarèsEntry): boolean {
+  if (normalizedPalmarèsEquals(teamName, entry.l1Winner)) return true
+  if (normalizedPalmarèsEquals(teamName, entry.l2Winner)) return true
+  if (entry.l1Relegated.some((t) => normalizedPalmarèsEquals(teamName, t))) return true
+  if (entry.l2Promoted.some((t) => normalizedPalmarèsEquals(teamName, t))) return true
+  return false
+}
+
+/**
+ * Nombre de saisons où l’équipe apparaît au moins une fois dans le palmarès
+ * (L1 vainqueur, L2 vainqueur, relégations L1, montées L2) — au plus une par saison.
+ * Comparaisons via {@link normalizeTeamName}.
+ */
+export function getManagerSeasonCount(managerName: string, palmarès: PalmarèsEntry[]): number {
+  let n = 0
+  for (const p of palmarès) {
+    if (teamAppearsInPalmarèsSeason(managerName, p)) n++
+  }
+  return n
+}
+
 /** Clés connues dans les effectifs Saison 10 (CURRENT_SEASON_10) — secours si le nom affiché diverge du libellé roster. */
 const SEASON_10_TEAM_KEY_DIVISION: Partial<Record<TeamKey, "L1" | "L2">> = {
   fc_goudal: "L1",
@@ -383,11 +408,11 @@ export function getLoreForMatch(homeTeam: string, awayTeam: string): string | nu
 }
 
 const COACH_LORE_TAG: Partial<Record<TeamKey, string>> = {
-  golden_roosters: "Ultra champion",
+  golden_roosters: "Le galactique",
   jakattak: "Fondateur en quête de trône",
   bab_olympique: "Légende déchue",
   madeinviet: "Anomalie statistique",
-  deepblue: "Club yo-yo",
+  deepblue: "Ça s'en va et ça revient...",
   celtic_gossbo: "Le survivant",
   omt: "Rebondisseur",
   mat_fc: "Outsider régulier",

@@ -442,14 +442,24 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
           <p className="pb-8 text-sm text-zinc-500">Aucun score saisi.</p>
         ) : null}
 
-        {data.matchDataStatus === "ready" && bonusHighlight ? (
+        {data.matchDataStatus === "ready" &&
+        ((bonusHighlight && bonusHighlight.entries.length > 0) ||
+          matchesForMatchday.length > 0 ||
+          standingsAfter.length > 0) ? (
           <section className="space-y-3 pb-10" aria-label="Coups tordus de la journée">
             <article
               className="flex min-h-0 flex-col border border-white/5 bg-[#141414] pl-[3px]"
               style={{ borderLeft: "3px solid #3ddc84" }}
             >
               <div className="p-4 sm:p-5">
-                <MatchdayNarrativeBonusSection bonusHighlight={bonusHighlight} variant="newspaper" />
+                <MatchdayNarrativeBonusSection
+                  bonusHighlight={bonusHighlight}
+                  variant="newspaper"
+                  matchdayNumber={matchdayNumber}
+                  matches={matchesForMatchday}
+                  managers={managers}
+                  standingsAfterMatchday={standingsAfter}
+                />
               </div>
             </article>
           </section>

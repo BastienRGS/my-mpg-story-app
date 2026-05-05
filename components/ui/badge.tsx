@@ -22,7 +22,7 @@ const badgeVariants = cva(
         leagueL2:
           'border border-[#333333] bg-[#1a1a1a] font-semibold text-[#666666] [a&]:hover:bg-[#1a1a1a]/95',
         lore:
-          'border border-[#3ddc8430] bg-[#3ddc8415] font-normal italic text-[#3ddc84]',
+          'border border-[#3ddc8430] bg-[#3ddc8415] font-normal italic text-[#3ddc84] max-w-full min-w-0 shrink whitespace-normal text-left leading-snug break-words',
         crisis:
           'border border-[#ff444440] bg-[#2a0a0a] font-semibold text-[#ff4444]',
       },

@@ -93,7 +93,10 @@ export function getMatchWinner(match: Pick<MatchResult, "home_score" | "away_sco
   return "draw"
 }
 
-export function getManagerByTeamId(teamId: string, managers: ManagerWithTeam[]): Manager | undefined {
+export function getManagerByTeamId(
+  teamId: string,
+  managers: ManagerWithTeam[]
+): ManagerWithTeam | undefined {
   return managers.find((m) => m.team?.id === teamId)
 }
 

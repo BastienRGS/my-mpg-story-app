@@ -1,4 +1,9 @@
-import type { BonusHighlightBlock } from "@/lib/types"
+import type {
+  BonusHighlightBlock,
+  ManagerWithTeam,
+  MatchdayScoresRow,
+  StandingsHistoryWithManager,
+} from "@/lib/types"
 import type { StoryTextSegment } from "@/lib/dashboard-story-copy"
 import { DashboardSynthesisInner } from "@/components/dashboard/DashboardStorySynthesis"
 import { cn } from "@/lib/utils"
@@ -12,6 +17,9 @@ type Props = {
   dek: string
   synthesisParagraphs: [StoryTextSegment[], StoryTextSegment[], StoryTextSegment[]]
   bonusHighlight: BonusHighlightBlock | null
+  matchesForMatchday?: MatchdayScoresRow[]
+  managers?: ManagerWithTeam[]
+  standingsAfterMatchday?: StandingsHistoryWithManager[]
 }
 
 export function DashboardStoryHero({
@@ -22,6 +30,9 @@ export function DashboardStoryHero({
   dek,
   synthesisParagraphs,
   bonusHighlight,
+  matchesForMatchday,
+  managers,
+  standingsAfterMatchday,
 }: Props) {
   return (
     <section
@@ -55,7 +66,14 @@ export function DashboardStoryHero({
 
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-white sm:text-base">{dek}</p>
 
-        <DashboardSynthesisInner paragraphs={synthesisParagraphs} bonusHighlight={bonusHighlight} />
+        <DashboardSynthesisInner
+          paragraphs={synthesisParagraphs}
+          bonusHighlight={bonusHighlight}
+          matchdayNumber={matchdayNumber}
+          matchesForMatchday={matchesForMatchday}
+          managers={managers}
+          standingsAfterMatchday={standingsAfterMatchday}
+        />
       </div>
     </section>
   )

@@ -6,6 +6,7 @@ import {
   writeCompareManagerIds,
   writeViewerManagerId,
   resolveDefaultViewerManagerId,
+  resolveViewerManagerIdWithStoredPreference,
   type StandingRowForComparison,
 } from "@/lib/standings-comparison"
 
@@ -27,7 +28,7 @@ export function useStandingsComparisonSelection(
       return
     }
 
-    const resolved = resolveDefaultViewerManagerId(managerIds, standingsRows, leagueId)
+    const resolved = resolveViewerManagerIdWithStoredPreference(managerIds, standingsRows, leagueId)
     setViewerId(resolved)
 
     const storedExtras = readCompareManagerIds(leagueId)

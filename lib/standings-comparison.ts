@@ -65,7 +65,43 @@ export function chartLineKey(managerId: string): string {
   return `mgr_${managerId}`
 }
 
+function pickViewerFromStandingsRows(
+  managerIds: string[],
+  rows: StandingRowForComparison[]
+): string {
+  if (rows.length === 0) return managerIds[0]
+
+  const latestMd = Math.max(...rows.map((r) => r.matchday_number))
+  const latest = rows.filter((r) => r.matchday_number === latestMd)
+  const leader = latest.find((r) => r.rank === 1)
+  if (leader && managerIds.includes(leader.manager_id)) return leader.manager_id
+
+  return managerIds[0]
+}
+
+/**
+ * SSR-safe default viewer: env + classement uniquement (pas de `localStorage`).
+ * Utiliser pour tout calcul pendant le rendu afin d’éviter les erreurs d’hydratation.
+ */
 export function resolveDefaultViewerManagerId(
+  managerIds: string[],
+  rows: StandingRowForComparison[],
+  _leagueId?: string | null
+): string | null {
+  if (managerIds.length === 0) return null
+
+  const envId =
+    typeof process !== "undefined" ? process.env.NEXT_PUBLIC_MY_MANAGER_ID?.trim() : undefined
+  if (envId && managerIds.includes(envId)) return envId
+
+  return pickViewerFromStandingsRows(managerIds, rows)
+}
+
+/**
+ * Résolution complète incluant la préférence navigateur. À n’appeler que depuis `useEffect`
+ * (après hydratation), jamais pendant le rendu initial.
+ */
+export function resolveViewerManagerIdWithStoredPreference(
   managerIds: string[],
   rows: StandingRowForComparison[],
   leagueId?: string | null
@@ -76,15 +112,8 @@ export function resolveDefaultViewerManagerId(
     typeof process !== "undefined" ? process.env.NEXT_PUBLIC_MY_MANAGER_ID?.trim() : undefined
   if (envId && managerIds.includes(envId)) return envId
 
-  const stored = typeof window !== "undefined" ? readViewerManagerId(leagueId) : null
+  const stored = readViewerManagerId(leagueId)
   if (stored && managerIds.includes(stored)) return stored
 
-  if (rows.length === 0) return managerIds[0]
-
-  const latestMd = Math.max(...rows.map((r) => r.matchday_number))
-  const latest = rows.filter((r) => r.matchday_number === latestMd)
-  const leader = latest.find((r) => r.rank === 1)
-  if (leader && managerIds.includes(leader.manager_id)) return leader.manager_id
-
-  return managerIds[0]
+  return pickViewerFromStandingsRows(managerIds, rows)
 }

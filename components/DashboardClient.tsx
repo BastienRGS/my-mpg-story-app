@@ -48,6 +48,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
     matchdayPunchlineFromTable,
     bonusHighlight,
     matchdayHighlightedBonuses,
+    matchResults,
   } = data
 
   const lastMdFromStandings =
@@ -84,6 +85,16 @@ export function DashboardClient({ data }: DashboardClientProps) {
     () => (ready ? pickMatchOfRoundRow(validatedMatchRows, matchdayNumber) : null),
     [ready, validatedMatchRows, matchdayNumber]
   )
+
+  const matchesForScoresDialog = useMemo(() => {
+    if (!ready || matchResults.length === 0) return []
+    return matchResults.filter((m) => m.matchday_number === matchdayNumber)
+  }, [ready, matchResults, matchdayNumber])
+
+  const standingsForScoresDialog = useMemo(() => {
+    if (!ready || standingsHistory.length === 0) return []
+    return standingsHistory.filter((s) => s.matchday_number === matchdayNumber)
+  }, [ready, standingsHistory, matchdayNumber])
 
   const { heroSegments, heroDek } = useMemo((): { heroSegments: StoryTextSegment[]; heroDek: string } => {
     if (!ready) {
@@ -277,6 +288,9 @@ export function DashboardClient({ data }: DashboardClientProps) {
               dek={heroDek}
               synthesisParagraphs={synthesisParagraphs}
               bonusHighlight={bonusHighlight}
+              matchesForMatchday={matchesForScoresDialog}
+              managers={managers}
+              standingsAfterMatchday={standingsForScoresDialog}
             />
 
             {/* Contenu sous le hero */}

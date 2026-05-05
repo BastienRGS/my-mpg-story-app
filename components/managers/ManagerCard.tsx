@@ -193,12 +193,12 @@ export function ManagerCard({ data }: { data: ManagerCardData }) {
 
           <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
             {loreTag ? (
-              <Badge variant="lore" className="w-fit text-xs">
+              <Badge variant="lore" className="text-xs">
                 {loreTag}
               </Badge>
             ) : null}
             <p
-              className="line-clamp-2 text-xs italic leading-relaxed text-muted-foreground"
+              className="break-words text-xs italic leading-relaxed text-muted-foreground sm:line-clamp-2"
               title={fullLore || undefined}
             >
               {loreDescription ?? "—"}

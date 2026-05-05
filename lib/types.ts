@@ -71,6 +71,12 @@ export interface Match {
   created_at: string | null
 }
 
+/** Ligne pour le dialogue « scores de la J » (`Match`, `MatchResult`, etc.). */
+export type MatchdayScoresRow = Pick<
+  Match,
+  "id" | "home_team_id" | "away_team_id" | "home_score" | "away_score"
+>
+
 export interface StandingsHistory {
   id: string
   season_id: string
@@ -174,6 +180,8 @@ export interface ManagerCard {
   /** Nom affiché en titre de carte (entraîneur). */
   coachName: string
   teamName: string
+  /** Libellé pour palmarès & lore (`identity_label` ou repli sur le nom d’équipe). */
+  loreTeamName: string
   currentLeague: "L1" | "L2"
   rank: number | null
   points: number | null
