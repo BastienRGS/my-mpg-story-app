@@ -41,7 +41,7 @@ const BONUS_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "capitaine", label: "Capitaine" },
 ]
 
-/** Types dont le résultat est déduit des buts (sauf Miroir = manuel). */
+/** Types dont le résultat est déduit des buts (Miroir et Valise à Nanard = manuels). */
 const AUTO_OUTCOME_TYPES = new Set([
   "zahia",
   "suarez",
@@ -50,7 +50,6 @@ const AUTO_OUTCOME_TYPES = new Set([
   "mcdo_plus",
   "tonton_pat",
   "capitaine",
-  "valise_nanard",
 ])
 
 function isAutoOutcomeBonusType(bonusType: string): boolean {
@@ -59,24 +58,11 @@ function isAutoOutcomeBonusType(bonusType: string): boolean {
 
 function computeAutoBonusOutcome(
   side: "home" | "away",
-  bonusType: string,
   homeScore: number,
   awayScore: number
-): "win" | "loss_or_draw" | "no_goal_to_cancel" {
-  const bt = bonusType.trim().toLowerCase()
+): "win" | "loss_or_draw" {
   const hs = Number.isFinite(homeScore) ? Math.max(0, Math.floor(homeScore)) : 0
   const asco = Number.isFinite(awayScore) ? Math.max(0, Math.floor(awayScore)) : 0
-
-  if (bt === "valise_nanard") {
-    if (side === "home") {
-      if (asco === 0) return "no_goal_to_cancel"
-      if (hs > asco) return "win"
-      return "loss_or_draw"
-    }
-    if (hs === 0) return "no_goal_to_cancel"
-    if (asco > hs) return "win"
-    return "loss_or_draw"
-  }
 
   if (side === "home") {
     if (hs > asco) return "win"
@@ -86,11 +72,8 @@ function computeAutoBonusOutcome(
   return "loss_or_draw"
 }
 
-function formatDetectedOutcomeLabel(outcome: "win" | "loss_or_draw" | "no_goal_to_cancel"): string {
+function formatDetectedOutcomeLabel(outcome: "win" | "loss_or_draw"): string {
   if (outcome === "win") return "Résultat détecté automatiquement : Victoire ✓"
-  if (outcome === "no_goal_to_cancel") {
-    return "Résultat détecté automatiquement : Pas de but adverse à annuler (valise pour rien) ✓"
-  }
   return "Résultat détecté automatiquement : Défaite ou nul ✓"
 }
 
@@ -227,6 +210,38 @@ function MirrorOutcomeSelect({
   )
 }
 
+function ValiseNanardOutcomeSelect({
+  prefix,
+  rowIndex,
+  value,
+  onChange,
+}: {
+  prefix: "home" | "away"
+  rowIndex: number
+  value: string
+  onChange: (value: string) => void
+}) {
+  const name = `${prefix}_bonus_outcome_${rowIndex}`
+  return (
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
+      <span className="text-sm text-muted-foreground sm:mt-2 sm:w-32 sm:shrink-0">Résultat</span>
+      <select
+        id={name}
+        name={name}
+        className={`${selectClassName} sm:flex-1`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">— Choisir —</option>
+        <option value="valise_decisive">But annulé et décisif (sans ça j'aurais perdu)</option>
+        <option value="valise_win_anyway">But annulé mais victoire assurée de toute façon</option>
+        <option value="no_goal_but_win">Pas de but à annuler mais victoire quand même</option>
+        <option value="no_goal_to_cancel">Pas de but à annuler + défaite</option>
+      </select>
+    </div>
+  )
+}
+
 function BonusOutcomeBlock({
   prefix,
   rowIndex,
@@ -260,8 +275,21 @@ function BonusOutcomeBlock({
     )
   }
 
+  if (bt === "valise_nanard") {
+    return (
+      <div className="border-l-2 border-muted/80 pl-3 sm:ml-[calc(8rem+0.75rem)]">
+        <ValiseNanardOutcomeSelect
+          prefix={prefix}
+          rowIndex={rowIndex}
+          value={mirrorOutcome}
+          onChange={onMirrorOutcomeChange}
+        />
+      </div>
+    )
+  }
+
   if (isAutoOutcomeBonusType(bt)) {
-    const outcome = computeAutoBonusOutcome(prefix, bt, homeScore, awayScore)
+    const outcome = computeAutoBonusOutcome(prefix, homeScore, awayScore)
     return (
       <div className="border-l-2 border-muted/80 pl-3 sm:ml-[calc(8rem+0.75rem)]">
         <input type="hidden" name={name} value={outcome} />

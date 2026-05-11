@@ -90,15 +90,18 @@ export function getBonusNarrative(
         "Même en sabotant les remplacements adverses,\nses chèvres n'ont pas réussi à s'imposer.\nTonton Pat' méritait mieux que ça."
     }
   } else if (b === "valise_nanard") {
-    if (o === "win") {
+    if (o === "valise_decisive") {
       raw =
-        "La valise sort au bon moment et annule le but adverse.\n3 points. 5M dépensés.\nL'investissement du mois."
+        "La valise sort au bon moment et change tout.\nLe but annulé fait toute la différence.\n3 points volés, 5M bien investis."
+    } else if (o === "valise_win_anyway") {
+      raw =
+        "La valise était peut-être superflue,\nmais une victoire reste une victoire.\n5M dépensés pour le style. On ne va pas se plaindre."
+    } else if (o === "no_goal_but_win") {
+      raw =
+        "Pas de but à annuler, mais qu'importe — la victoire est là.\nLa valise était inutile, le résultat ne l'est pas.\n5M dépensés pour rien, mais on prend les 3 points."
     } else if (o === "no_goal_to_cancel") {
       raw =
         "Il a sorti la valise pour rien.\nPas de but à annuler, 5M envolés,\net la défaite en prime. Looser !"
-    } else if (o === "loss_or_draw") {
-      raw =
-        "La valise est sortie, mais le but adverse reste.\nPas assez fort pour renverser le match.\n5M dépensés pour pas grand-chose."
     }
   } else if (b === "mcdo_plus") {
     if (o === "win") {
