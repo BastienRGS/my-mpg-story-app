@@ -198,8 +198,8 @@ export function ManagerCard({ data }: { data: ManagerCardData }) {
               </Badge>
             ) : null}
             <p
-              className="break-words text-xs italic leading-relaxed text-muted-foreground sm:line-clamp-2"
-              title={fullLore || undefined}
+              className="text-xs italic text-muted-foreground"
+              style={{ lineHeight: 1.6 }}
             >
               {loreDescription ?? "—"}
             </p>
