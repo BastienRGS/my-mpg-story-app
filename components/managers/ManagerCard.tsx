@@ -132,7 +132,7 @@ export function ManagerCard({ data }: { data: ManagerCardData }) {
 
           <Separator className="shrink-0" />
 
-          <div className="flex min-h-[3.25rem] shrink-0 flex-col justify-center">
+          <div className="shrink-0">
             {showTrophyRow ? (
               <div
                 className="flex flex-wrap items-end justify-center gap-x-5 gap-y-2"
@@ -191,7 +191,7 @@ export function ManagerCard({ data }: { data: ManagerCardData }) {
 
           <Separator className="shrink-0" />
 
-          <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
+          <div className="flex min-h-0 flex-1 flex-col justify-start gap-2 pt-2">
             {loreTag ? (
               <Badge variant="lore" className="text-xs">
                 {loreTag}
