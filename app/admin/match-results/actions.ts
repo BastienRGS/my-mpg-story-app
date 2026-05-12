@@ -1,7 +1,6 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { timingSafeEqual } from "node:crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { z } from "zod"
 import { getCurrentSeason, getLeagueBySlug } from "@/lib/queries"
@@ -14,19 +13,6 @@ export type MatchEntryActionState = {
 }
 
 const MAX_BULK_ROWS = 40
-
-function secretsMatch(provided: string, expected: string | undefined): boolean {
-  const normalizedExpected = expected?.trim()
-  if (!normalizedExpected || normalizedExpected.length === 0) return false
-  try {
-    const a = Buffer.from(provided.trim(), "utf8")
-    const b = Buffer.from(normalizedExpected, "utf8")
-    if (a.length !== b.length) return false
-    return timingSafeEqual(a, b)
-  } catch {
-    return false
-  }
-}
 
 async function ensureMatchdayId(
   supabase: SupabaseClient,
@@ -135,15 +121,13 @@ async function upsertMatch(
 
 const STANDARD_BONUS_OUTCOMES = new Set(["win", "loss_or_draw"])
 const MIROIR_OUTCOMES = new Set(["mirror_wasted", "mirror_genius", "mirror_draw"])
+const VALISE_OUTCOMES = new Set(["valise_decisive", "valise_win_anyway", "no_goal_but_win", "no_goal_to_cancel"])
 
-/** Aligné sur `computeAutoBonusOutcome` (formulaire) : valise = win | loss_or_draw | no_goal_to_cancel. */
 function isValidBonusOutcome(bonusType: string, outcome: string): boolean {
   const t = bonusType.toLowerCase()
   const o = outcome.toLowerCase()
   if (t === "miroir") return MIROIR_OUTCOMES.has(o)
-  if (t === "valise_nanard") {
-    return STANDARD_BONUS_OUTCOMES.has(o) || o === "no_goal_to_cancel"
-  }
+  if (t === "valise_nanard") return VALISE_OUTCOMES.has(o)
   return STANDARD_BONUS_OUTCOMES.has(o)
 }
 
@@ -246,7 +230,6 @@ const bulkMetaSchema = z.object({
   leagueSlug: z.string().min(1, "Ligue requise"),
   matchday_number: z.coerce.number().int().min(1, "Journée ≥ 1"),
   row_count: z.coerce.number().int().min(1).max(MAX_BULK_ROWS),
-  adminSecret: z.string().min(1, "Secret admin requis"),
 })
 
 const uuid = z.string().uuid()
@@ -260,20 +243,6 @@ export async function submitBulkMatchResults(
   _prev: MatchEntryActionState,
   formData: FormData
 ): Promise<MatchEntryActionState> {
-  const expectedSecret = process.env.ADMIN_MATCH_ENTRY_SECRET?.trim()
-  if (!expectedSecret) {
-    return {
-      ok: false,
-      message:
-        "Formulaire désactivé : définissez ADMIN_MATCH_ENTRY_SECRET dans .env.local (voir docs/WEEKLY_WORKFLOW.md).",
-    }
-  }
-
-  const adminSecret = String(formData.get("adminSecret") ?? "")
-  if (!secretsMatch(adminSecret, expectedSecret)) {
-    return { ok: false, message: "Secret admin incorrect." }
-  }
-
   const supabase = createServiceRoleClient()
   if (!supabase) {
     return {
@@ -287,7 +256,6 @@ export async function submitBulkMatchResults(
     leagueSlug: String(formData.get("leagueSlug") ?? ""),
     matchday_number: formData.get("matchday_number"),
     row_count: formData.get("row_count"),
-    adminSecret,
   }
 
   const parsedMeta = bulkMetaSchema.safeParse(rawMeta)

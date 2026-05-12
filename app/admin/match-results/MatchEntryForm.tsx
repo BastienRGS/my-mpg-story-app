@@ -541,24 +541,6 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
       <input type="hidden" name="seasonId" value={seasonId} />
       <input type="hidden" name="row_count" value={numRows} />
 
-      <div className="space-y-2">
-        <Label htmlFor="adminSecret">Secret admin</Label>
-        <Input
-          id="adminSecret"
-          name="adminSecret"
-          type="password"
-          autoComplete="off"
-          placeholder="ADMIN_MATCH_ENTRY_SECRET"
-          required
-          className="max-w-md"
-        />
-        <p className="text-xs text-muted-foreground">
-          Même valeur que <code className="rounded bg-muted px-1">ADMIN_MATCH_ENTRY_SECRET</code> dans
-          .env.local — ne la partagez pas. Le secret n’est pas mémorisé ; le reste du formulaire est
-          sauvegardé automatiquement dans ce navigateur (rechargement ou mauvais code inclus).
-        </p>
-      </div>
-
       {!canSubmit ? (
         <div
           className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-muted-foreground"

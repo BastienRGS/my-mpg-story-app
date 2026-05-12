@@ -2,6 +2,7 @@ import Link from "next/link"
 import { ClipboardList } from "lucide-react"
 import { getCurrentSeason, getManagers, listLeagues } from "@/lib/queries"
 import { AdminMatchWorkspace } from "./AdminMatchWorkspace"
+import { AccessGate } from "@/components/admin/AccessGate"
 import type { LeagueOption } from "./MatchEntryForm"
 
 export const metadata = {
@@ -31,9 +32,7 @@ export default async function AdminMatchResultsPage() {
     })
   )
 
-  const formEnabled = Boolean(
-    process.env.ADMIN_MATCH_ENTRY_SECRET?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
+  const formEnabled = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
 
   /** Première ligue renvoyée par Supabase (`listLeagues` / `order`). */
   const defaultLeagueSlug = leagueOptions[0]?.slug ?? ""
@@ -61,30 +60,32 @@ export default async function AdminMatchResultsPage() {
         </header>
 
         {formEnabled ? (
-          <AdminMatchWorkspace leagueOptions={leagueOptions} defaultLeagueSlug={defaultLeagueSlug}>
-            <section className="space-y-3 rounded-xl border border-border bg-card/50 p-4 sm:p-5">
-              <h2 className="text-sm font-semibold text-foreground">Checklist rapide</h2>
-              <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
-                <li>Noter les scores de la journée.</li>
-                <li>
-                  Les insérer dans <strong className="text-foreground">matches</strong> (formulaire ci-dessus
-                  ou éditeur Supabase — détail dans{" "}
-                  <code className="rounded bg-muted px-1">docs/WEEKLY_WORKFLOW.md</code>).
-                </li>
-                <li>
-                  Ouvrir le{" "}
-                  <Link href="/" className="text-primary underline-offset-4 hover:underline">
-                    tableau de bord ligue
-                  </Link>{" "}
-                  et vérifier qu’il n’y a pas d’alerte rouge.
-                </li>
-              </ol>
-              <p className="text-xs text-muted-foreground">
-                Documentation complète : fichier{" "}
-                <code className="rounded bg-muted px-1">docs/WEEKLY_WORKFLOW.md</code> à la racine du dépôt.
-              </p>
-            </section>
-          </AdminMatchWorkspace>
+          <AccessGate>
+            <AdminMatchWorkspace leagueOptions={leagueOptions} defaultLeagueSlug={defaultLeagueSlug}>
+              <section className="space-y-3 rounded-xl border border-border bg-card/50 p-4 sm:p-5">
+                <h2 className="text-sm font-semibold text-foreground">Checklist rapide</h2>
+                <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                  <li>Noter les scores de la journée.</li>
+                  <li>
+                    Les insérer dans <strong className="text-foreground">matches</strong> (formulaire ci-dessus
+                    ou éditeur Supabase — détail dans{" "}
+                    <code className="rounded bg-muted px-1">docs/WEEKLY_WORKFLOW.md</code>).
+                  </li>
+                  <li>
+                    Ouvrir le{" "}
+                    <Link href="/" className="text-primary underline-offset-4 hover:underline">
+                      tableau de bord ligue
+                    </Link>{" "}
+                    et vérifier qu’il n’y a pas d’alerte rouge.
+                  </li>
+                </ol>
+                <p className="text-xs text-muted-foreground">
+                  Documentation complète : fichier{" "}
+                  <code className="rounded bg-muted px-1">docs/WEEKLY_WORKFLOW.md</code> à la racine du dépôt.
+                </p>
+              </section>
+            </AdminMatchWorkspace>
+          </AccessGate>
         ) : (
           <>
             <section className="space-y-3 rounded-xl border border-border bg-card/50 p-4 sm:p-5">
