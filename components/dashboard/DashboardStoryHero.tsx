@@ -6,6 +6,7 @@ import type {
 } from "@/lib/types"
 import type { StoryTextSegment } from "@/lib/dashboard-story-copy"
 import { DashboardSynthesisInner } from "@/components/dashboard/DashboardStorySynthesis"
+import { MatchdayResultsDialogTrigger } from "@/components/sections/MatchdayNarrative"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -66,14 +67,15 @@ export function DashboardStoryHero({
 
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-white sm:text-base">{dek}</p>
 
-        <DashboardSynthesisInner
-          paragraphs={synthesisParagraphs}
-          bonusHighlight={bonusHighlight}
+        <MatchdayResultsDialogTrigger
           matchdayNumber={matchdayNumber}
-          matchesForMatchday={matchesForMatchday}
-          managers={managers}
-          standingsAfterMatchday={standingsAfterMatchday}
+          matches={matchesForMatchday ?? []}
+          managers={managers ?? []}
+          standingsAfterMatchday={standingsAfterMatchday ?? []}
+          surface="hero"
         />
+
+        <DashboardSynthesisInner paragraphs={synthesisParagraphs} bonusHighlight={bonusHighlight} />
       </div>
     </section>
   )

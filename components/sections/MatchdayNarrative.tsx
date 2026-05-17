@@ -241,9 +241,75 @@ function MatchdayScoresDialog({
   )
 }
 
+export type MatchdayResultsDialogTriggerProps = {
+  matchdayNumber: number
+  matches?: MatchdayScoresRow[]
+  managers: ManagerWithTeam[]
+  standingsAfterMatchday?: StandingsHistoryWithManager[]
+  /** `hero` : bandeau dashboard zinc-950 · `newspaper` : carte épisode sombre */
+  surface?: "hero" | "newspaper"
+  /** Classes sur le conteneur du bouton (ex. `mt-4`). */
+  className?: string
+}
+
+/** Bouton « Voir résultats » + dialogue scores / classement (dashboard hero ou bas de bloc épisode). */
+export function MatchdayResultsDialogTrigger({
+  matchdayNumber,
+  matches = [],
+  managers,
+  standingsAfterMatchday = [],
+  surface = "hero",
+  className,
+}: MatchdayResultsDialogTriggerProps) {
+  const matchList = matches ?? []
+  const standingsList = standingsAfterMatchday ?? []
+  const hasMatchRows = matchList.length > 0
+  const hasStandingsRows = standingsList.length > 0
+  const [open, setOpen] = useState(false)
+
+  if (
+    matchdayNumber < 1 ||
+    (!hasMatchRows && !hasStandingsRows) ||
+    !Array.isArray(managers) ||
+    managers.length === 0
+  ) {
+    return null
+  }
+
+  const onDarkSurround = surface === "hero" || surface === "newspaper"
+
+  return (
+    <>
+      <div className={cn("flex justify-center", className)}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn(
+            "w-full sm:w-auto",
+            onDarkSurround &&
+              "border-white/25 bg-zinc-900/50 text-zinc-100 hover:border-white/35 hover:bg-zinc-800/70 hover:text-white"
+          )}
+          onClick={() => setOpen(true)}
+        >
+          Voir résultats
+        </Button>
+      </div>
+      <MatchdayScoresDialog
+        open={open}
+        onOpenChange={setOpen}
+        matchdayNumber={matchdayNumber}
+        matches={matchList}
+        standingsAfterMatchday={standingsList}
+        managers={managers}
+      />
+    </>
+  )
+}
+
 /**
  * Bloc narratif des bonus mis en avant (entre Héros du jour et Impact classement sur le dashboard).
- * Peut afficher un bouton + dialogue des scores si `matches` / `managers` / `matchdayNumber` sont fournis.
+ * Sur la page épisode (`newspaper`), peut afficher le bouton résultats en bas du bloc.
  */
 export function MatchdayNarrativeBonusSection({
   bonusHighlight,
@@ -253,14 +319,13 @@ export function MatchdayNarrativeBonusSection({
   managers,
   standingsAfterMatchday,
 }: Props) {
-  const [scoresOpen, setScoresOpen] = useState(false)
-
   const hasBonus = Boolean(bonusHighlight && bonusHighlight.entries.length > 0)
   const matchList = matches ?? []
   const standingsList = standingsAfterMatchday ?? []
   const hasMatchRows = matchList.length > 0
   const hasStandingsRows = standingsList.length > 0
   const showScoresButton =
+    variant === "newspaper" &&
     matchdayNumber != null &&
     matchdayNumber >= 1 &&
     (hasMatchRows || hasStandingsRows) &&
@@ -270,7 +335,6 @@ export function MatchdayNarrativeBonusSection({
   if (!hasBonus && !showScoresButton) return null
 
   const paper = variant === "newspaper"
-  const onDarkSurround = paper || variant === "dashboard"
 
   return (
     <div className={cn("space-y-4", hasBonus && !paper && "border-t border-border/60 pt-5")}>
@@ -344,31 +408,14 @@ export function MatchdayNarrativeBonusSection({
       ) : null}
 
       {showScoresButton ? (
-        <>
-          <div className="mt-4 flex justify-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={cn(
-                "w-full sm:w-auto",
-                onDarkSurround &&
-                  "border-white/25 bg-zinc-900/50 text-zinc-100 hover:border-white/35 hover:bg-zinc-800/70 hover:text-white"
-              )}
-              onClick={() => setScoresOpen(true)}
-            >
-              Scores et classement — J{matchdayNumber}
-            </Button>
-          </div>
-          <MatchdayScoresDialog
-            open={scoresOpen}
-            onOpenChange={setScoresOpen}
-            matchdayNumber={matchdayNumber!}
-            matches={matchList}
-            standingsAfterMatchday={standingsList}
-            managers={managers!}
-          />
-        </>
+        <MatchdayResultsDialogTrigger
+          matchdayNumber={matchdayNumber!}
+          matches={matchList}
+          managers={managers!}
+          standingsAfterMatchday={standingsList}
+          surface="newspaper"
+          className="mt-4"
+        />
       ) : null}
     </div>
   )

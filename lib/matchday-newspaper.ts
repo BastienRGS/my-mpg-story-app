@@ -1,7 +1,7 @@
 import type { LeagueStoryKpi } from "@/lib/league-story-kpis"
 import { getLoreForCoach, normalizeTeamName, resolveSeason10RosterTeamDivision } from "@/lib/league-lore"
 import type { MatchBonusRecord } from "@/lib/matchday-narrative"
-import type { Manager, ManagerWithTeam, MatchResult, StandingsHistoryWithManager, ValidatedMatchRow } from "@/lib/types"
+import type { Manager, ManagerWithTeam, MatchResult, Season, StandingsHistoryWithManager, ValidatedMatchRow } from "@/lib/types"
 
 function toWordsUpper(s: string, maxWords: number): string {
   return s
@@ -114,8 +114,8 @@ export function isRolandoTeam(identityLabel: string): boolean {
   return n === normalizeTeamName("Golden Roosters") || n === normalizeTeamName("Jakattak")
 }
 
-export function isEndOfSeason(matchdayNumber: number, totalMatchdays: number): boolean {
-  return matchdayNumber >= totalMatchdays
+export function isEndOfSeason(season: Season | null): boolean {
+  return season?.is_finished === true
 }
 
 function displayTeamOrCoach(m: ManagerWithTeam): string {
@@ -166,6 +166,7 @@ export type BuildDynamicHeadlineParams = {
   matchdayNumber: number
   totalMatchdays: number
   seasonName: string
+  season: Season | null
   managers: ManagerWithTeam[]
   standingsHistory: StandingsHistoryWithManager[]
   validatedMatchRows: ValidatedMatchRow[]
@@ -180,13 +181,15 @@ export type DynamicHeadlineResult = { headline: string; intro: string }
 export function buildDynamicHeadline(params: BuildDynamicHeadlineParams): DynamicHeadlineResult {
   const {
     matchdayNumber,
-    totalMatchdays,
+    totalMatchdays: _totalMatchdays,
     seasonName,
+    season,
     managers,
     standingsHistory,
     validatedMatchRows,
     highlightedBonusesThisMatchday,
   } = params
+  void _totalMatchdays
 
   const rowsMd = standingsHistory
     .filter((r) => r.matchday_number === matchdayNumber)
@@ -194,7 +197,7 @@ export function buildDynamicHeadline(params: BuildDynamicHeadlineParams): Dynami
 
   const dayMatches = validatedMatchRows.filter((r) => r.matchday_number === matchdayNumber)
   const nTeams = rowsMd.length
-  const eos = isEndOfSeason(matchdayNumber, totalMatchdays)
+  const eos = isEndOfSeason(season)
   const division = rosterLeagueForContext(managers)
   const seasonN = seasonNumberFromName(seasonName)
 

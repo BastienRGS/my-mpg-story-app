@@ -25,6 +25,7 @@ export interface Season {
   league_id: string
   name: string
   is_current: boolean | null
+  is_finished: boolean | null
   created_at: string | null
   total_matchdays: number | null
 }
@@ -251,4 +252,16 @@ export interface DashboardData {
     created_at?: string | null
     highlight?: boolean | null
   }>
+  seasonRecap: SeasonRecap | null
+}
+
+export type SeasonRecap = {
+  l1Champion: Manager | null
+  l1RunnerUp: Manager | null
+  l1Relegated: Manager[]
+  l2Champion: Manager | null
+  l2Promoted: Manager[]
+  topScorer: { manager: Manager; goals: number } | null
+  bestDefense: { manager: Manager; goalsAgainst: number } | null
+  biggestWin: { home: string; away: string; homeScore: number; awayScore: number } | null
 }

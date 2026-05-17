@@ -13,6 +13,7 @@ import type {
   DashboardMatchDataStatus,
   ValidatedMatchRow,
   ManagerCard,
+  SeasonRecap,
 } from '@/lib/types'
 import { computeStandingsHistoryFromMatches, maxMatchdayFromMatches } from '@/lib/compute-standings-from-matches'
 import { validateSeasonMatchResults } from '@/lib/match-results-validation'
@@ -94,7 +95,7 @@ export async function resolveDashboardLeague(leagueSlug?: string | null): Promis
   return leagues[0]
 }
 
-const SEASON_SELECT = 'id, name, is_current, league_id, total_matchdays'
+const SEASON_SELECT = 'id, name, is_current, is_finished, league_id, total_matchdays'
 
 export function getTotalMatchdaysFromSeason(season: Season | null): number {
   return season?.total_matchdays ?? 12
@@ -849,6 +850,7 @@ function emptyDashboard(
     bonusHighlight: null,
     totalMatchdays: 12,
     matchdayHighlightedBonuses: [],
+    seasonRecap: null,
     ...overrides,
   }
 }
@@ -938,6 +940,11 @@ export async function getDashboardData(
     bonusHighlight = computeMatchdayBonusHighlight(bonusRows, managers)
   }
 
+  let seasonRecap: SeasonRecap | null = null
+  if (season.is_finished === true) {
+    seasonRecap = await getSeasonRecap(season.id)
+  }
+
   return {
     league,
     season,
@@ -956,5 +963,114 @@ export async function getDashboardData(
     bonusHighlight,
     totalMatchdays: getTotalMatchdaysFromSeason(season),
     matchdayHighlightedBonuses,
+    seasonRecap,
   }
+}
+
+export async function getSeasonRecap(seasonId: string): Promise<SeasonRecap> {
+  const empty: SeasonRecap = {
+    l1Champion: null,
+    l1RunnerUp: null,
+    l1Relegated: [],
+    l2Champion: null,
+    l2Promoted: [],
+    topScorer: null,
+    bestDefense: null,
+    biggestWin: null,
+  }
+
+  const supabase = await createClient()
+  const { data: seasonRow } = await supabase
+    .from('seasons')
+    .select('league_id')
+    .eq('id', seasonId)
+    .maybeSingle()
+  if (!seasonRow?.league_id) return empty
+
+  const { data: leagueRow } = await supabase
+    .from('leagues')
+    .select('slug')
+    .eq('id', seasonRow.league_id)
+    .maybeSingle()
+  const isL1 = leagueRow?.slug?.includes('ligue1') ?? false
+
+  const managers = await getManagers(seasonRow.league_id, seasonId)
+  if (managers.length === 0) return empty
+
+  const { rows: matchResults, error } = await getMatchResults(seasonId)
+  if (error || matchResults.length === 0) return empty
+
+  const { issues, validRows } = validateSeasonMatchResults(managers, matchResults)
+  if (issues.length > 0 || validRows.length === 0) return empty
+
+  const standings = computeStandingsHistoryFromMatches(seasonId, managers, validRows)
+  const lastMd = maxMatchdayFromMatches(validRows)
+  const final = standings
+    .filter((s) => s.matchday_number === lastMd)
+    .sort((a, b) => a.rank - b.rank)
+
+  const findMgr = (mid: string): import('@/lib/types').Manager | null =>
+    managers.find((m) => m.id === mid) ?? null
+
+  const rank1 = final[0] ? findMgr(final[0].manager_id) : null
+  const rank2 = final[1] ? findMgr(final[1].manager_id) : null
+
+  const l1Champion = isL1 ? rank1 : null
+  const l1RunnerUp = isL1 ? rank2 : null
+  const l1Relegated = isL1
+    ? final
+        .filter((s) => s.rank === 7 || s.rank === 8)
+        .map((s) => findMgr(s.manager_id))
+        .filter((m): m is import('@/lib/types').Manager => m !== null)
+    : []
+
+  const l2Champion = !isL1 ? rank1 : null
+  const l2Promoted = !isL1
+    ? final
+        .filter((s) => s.rank === 1 || s.rank === 2)
+        .map((s) => findMgr(s.manager_id))
+        .filter((m): m is import('@/lib/types').Manager => m !== null)
+    : []
+
+  // Top scorer: highest goals_for in final standings
+  const topScorerRow = final.reduce<typeof final[0] | null>((best, cur) => {
+    if (!best) return cur
+    return (cur.goals_for ?? 0) > (best.goals_for ?? 0) ? cur : best
+  }, null)
+  const topScorerMgr = topScorerRow ? findMgr(topScorerRow.manager_id) : null
+  const topScorer = topScorerMgr && topScorerRow
+    ? { manager: topScorerMgr, goals: topScorerRow.goals_for ?? 0 }
+    : null
+
+  // Best defense: lowest goals_against in final standings
+  const bestDefRow = final.reduce<typeof final[0] | null>((best, cur) => {
+    if (!best) return cur
+    const g = cur.goals_against ?? Infinity
+    const bg = best.goals_against ?? Infinity
+    return g < bg ? cur : best
+  }, null)
+  const bestDefMgr = bestDefRow ? findMgr(bestDefRow.manager_id) : null
+  const bestDefense = bestDefMgr && bestDefRow
+    ? { manager: bestDefMgr, goalsAgainst: bestDefRow.goals_against ?? 0 }
+    : null
+
+  // Biggest win: highest goal margin
+  let biggestWin: SeasonRecap['biggestWin'] = null
+  let bestMargin = 0
+  for (const row of validRows) {
+    const margin = Math.abs(row.home_score - row.away_score)
+    if (margin > bestMargin) {
+      bestMargin = margin
+      const hm = managers.find((m) => m.team?.id === row.home_team_id)
+      const am = managers.find((m) => m.team?.id === row.away_team_id)
+      biggestWin = {
+        home: hm?.team?.name ?? hm?.name ?? '?',
+        away: am?.team?.name ?? am?.name ?? '?',
+        homeScore: row.home_score,
+        awayScore: row.away_score,
+      }
+    }
+  }
+
+  return { l1Champion, l1RunnerUp, l1Relegated, l2Champion, l2Promoted, topScorer, bestDefense, biggestWin }
 }

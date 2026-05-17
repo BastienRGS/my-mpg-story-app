@@ -20,6 +20,7 @@ import {
   type StoryTextSegment,
 } from "@/lib/dashboard-story-copy"
 import { buildDynamicHeadline } from "@/lib/matchday-newspaper"
+import { SeasonRecapSection } from "@/components/sections/SeasonRecapSection"
 import {
   computeFormExtremeCoaches,
   computeLeaderStripKpi,
@@ -49,6 +50,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
     bonusHighlight,
     matchdayHighlightedBonuses,
     matchResults,
+    seasonRecap,
   } = data
 
   const lastMdFromStandings =
@@ -115,6 +117,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
       matchdayNumber,
       totalMatchdays: totalMatchdaysForSeason,
       seasonName: season?.name ?? "",
+      season: season ?? null,
       managers,
       standingsHistory,
       validatedMatchRows,
@@ -132,6 +135,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
     totalMatchdaysForSeason,
     season?.name,
     season?.total_matchdays,
+    season,
     matchdayHighlightedBonuses,
   ])
 
@@ -278,6 +282,15 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 </div>
               </Link>
             </div>
+
+            {/* Bilan fin de saison */}
+            {season.is_finished === true && seasonRecap && (
+              <SeasonRecapSection
+                season={season}
+                leagueSlug={league.slug}
+                recap={seasonRecap}
+              />
+            )}
 
             {/* Hero unique : accroche + intro (dek) + sous-récits synthèse */}
             <DashboardStoryHero
