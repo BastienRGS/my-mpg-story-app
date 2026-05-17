@@ -453,3 +453,55 @@ export async function submitBulkMatchResults(
     leagueSlug,
   }
 }
+
+export async function closeSeasonAction(
+  leagueSlug: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient()
+  if (!supabase) {
+    return { success: false, error: "SUPABASE_SERVICE_ROLE_KEY manquant." }
+  }
+
+  const league = await getLeagueBySlug(leagueSlug)
+  if (!league) return { success: false, error: "Ligue introuvable." }
+
+  const season = await getCurrentSeason(league.id)
+  if (!season) return { success: false, error: "Aucune saison courante pour cette ligue." }
+
+  const { error } = await supabase
+    .from("seasons")
+    .update({ is_finished: true })
+    .eq("id", season.id)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath(`/ligue/${leagueSlug}`)
+  revalidatePath("/admin/match-results")
+  return { success: true }
+}
+
+export async function reopenSeasonAction(
+  leagueSlug: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient()
+  if (!supabase) {
+    return { success: false, error: "SUPABASE_SERVICE_ROLE_KEY manquant." }
+  }
+
+  const league = await getLeagueBySlug(leagueSlug)
+  if (!league) return { success: false, error: "Ligue introuvable." }
+
+  const season = await getCurrentSeason(league.id)
+  if (!season) return { success: false, error: "Aucune saison courante pour cette ligue." }
+
+  const { error } = await supabase
+    .from("seasons")
+    .update({ is_finished: false })
+    .eq("id", season.id)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath(`/ligue/${leagueSlug}`)
+  revalidatePath("/admin/match-results")
+  return { success: true }
+}

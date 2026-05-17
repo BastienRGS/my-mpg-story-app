@@ -3,6 +3,7 @@ import { ClipboardList } from "lucide-react"
 import { getCurrentSeason, getManagers, listLeagues } from "@/lib/queries"
 import { AdminMatchWorkspace } from "./AdminMatchWorkspace"
 import { AccessGate } from "@/components/admin/AccessGate"
+import { SeasonManager } from "@/components/admin/SeasonManager"
 import type { LeagueOption } from "./MatchEntryForm"
 
 export const metadata = {
@@ -29,6 +30,19 @@ export default async function AdminMatchResultsPage() {
         .filter((m) => m.team?.id)
         .map((m) => ({ id: m.team!.id, label: m.team!.name || m.name }))
       return { slug: l.slug, name: l.name, seasonId: season.id, teams }
+    })
+  )
+
+  const seasonManagerEntries = await Promise.all(
+    leagues.map(async (l) => {
+      const season = await getCurrentSeason(l.id)
+      return {
+        slug: l.slug,
+        name: l.name,
+        season: season
+          ? { name: season.name, is_finished: season.is_finished === true }
+          : null,
+      }
     })
   )
 
@@ -85,6 +99,13 @@ export default async function AdminMatchResultsPage() {
                 </p>
               </section>
             </AdminMatchWorkspace>
+
+            <section className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Gestion de la saison
+              </p>
+              <SeasonManager leagues={seasonManagerEntries} />
+            </section>
           </AccessGate>
         ) : (
           <>
