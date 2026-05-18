@@ -240,7 +240,7 @@ export function buildDynamicHeadline(params: BuildDynamicHeadlineParams): Dynami
         const isJakFirst = normalizeTeamName(m1label) === normalizeTeamName("Jakattak")
         if (isGRFirst) {
           return {
-            headline: "Le doublé Rolando. La ligue leur appartient.",
+            headline: "La dynastie Rolando. La ligue leur appartient.",
             intro: capSentences(
               "Golden Roosters champion, Jakattak dauphin. Les frangins Rolando trustent le podium. Le fondateur s'incline devant son frère. Encore. La thérapie familiale attendra.",
               5
@@ -258,7 +258,7 @@ export function buildDynamicHeadline(params: BuildDynamicHeadlineParams): Dynami
         }
         // Sub-case C — fallback si identification échoue
         return {
-          headline: "Le doublé Rolando. Premier ET deuxième.",
+          headline: "La dynastie Rolando. Premier ET deuxième.",
           intro: capSentences(
             "Le doublé Rolando. Premier ET deuxième. La ligue leur appartient, les autres jouent pour la 3e place.",
             3
