@@ -20,12 +20,12 @@ import {
   type StoryTextSegment,
 } from "@/lib/dashboard-story-copy"
 import { buildDynamicHeadline } from "@/lib/matchday-newspaper"
+import { computeDangerZone, computePromotionZone } from "@/lib/matchday-narrative"
 import { SeasonRecapSection } from "@/components/sections/SeasonRecapSection"
 import {
   computeFormExtremeCoaches,
   computeLeaderStripKpi,
   computeLeagueStoryKpis,
-  computeMatchOfRoundForMatchday,
   pickMatchOfRoundRow,
 } from "@/lib/league-story-kpis"
 
@@ -70,17 +70,9 @@ export function DashboardClient({ data }: DashboardClientProps) {
     [managers, standingsHistory]
   )
 
-  const { best: formHot, worst: formCold } = useMemo(
+  const { best: formHot } = useMemo(
     () => computeFormExtremeCoaches(managers, standingsHistory),
     [managers, standingsHistory]
-  )
-
-  const matchOfRoundKpi = useMemo(
-    () =>
-      ready
-        ? computeMatchOfRoundForMatchday(managers, validatedMatchRows, matchdayNumber)
-        : computeMatchOfRoundForMatchday(managers, [], matchdayNumber),
-    [ready, managers, validatedMatchRows, matchdayNumber]
   )
 
   const motwRow = useMemo(
@@ -139,18 +131,13 @@ export function DashboardClient({ data }: DashboardClientProps) {
     matchdayHighlightedBonuses,
   ])
 
-  const synthesisParagraphs = useMemo((): [StoryTextSegment[], StoryTextSegment[], StoryTextSegment[]] => {
+  const synthesisParagraphs = useMemo((): [StoryTextSegment[], StoryTextSegment[]] => {
     if (!ready) {
       return [
         [{ text: "Les résultats ne sont pas encore prêts pour écrire le récit de cette ligue." }],
         [
           {
-            text: "Dès que les matchs seront validés, la synthèse analysera les forces, les faiblesses et le match qui a fait vibrer la Journée.",
-          },
-        ],
-        [
-          {
-            text: "Revenez après la prochaine mise à jour — le championnat reprend toujours sur le fil du groupe WhatsApp.",
+            text: "Dès que les matchs seront validés, la synthèse analysera les forces, les faiblesses et les dynamiques en jeu.",
           },
         ],
       ]
@@ -158,29 +145,46 @@ export function DashboardClient({ data }: DashboardClientProps) {
     return buildDashboardSynthesisParagraphs({
       managers,
       standingsHistory,
-      validatedRows: validatedMatchRows,
       matchdayNumber,
       leaderStrip,
       formBest: formHot,
-      formWorst: formCold,
-      matchOfRound: matchOfRoundKpi,
     })
   }, [
     ready,
     managers,
     standingsHistory,
-    validatedMatchRows,
     matchdayNumber,
     leaderStrip,
     formHot,
-    formCold,
-    matchOfRoundKpi,
   ])
 
   const standingsAfter = useMemo(
     () => standingsHistory.filter((r) => r.matchday_number === matchdayNumber),
     [standingsHistory, matchdayNumber]
   )
+
+  const dangerZone = useMemo(() => {
+    if (!ready) return null
+    console.log("dangerZone standings input:", standingsAfter?.length)
+    const result = computeDangerZone({
+      standingsRows: standingsAfter,
+      managers,
+      remainingMatchdays: Math.max(0, totalMatchdaysForSeason - matchdayNumber),
+      isEndOfSeason: season?.is_finished === true,
+    })
+    console.log("dangerZone result:", result)
+    return result
+  }, [ready, standingsAfter, managers, totalMatchdaysForSeason, matchdayNumber, season?.is_finished])
+
+  const promotionZone = useMemo(() => {
+    if (!ready) return null
+    return computePromotionZone({
+      standingsRows: standingsAfter,
+      managers,
+      remainingMatchdays: Math.max(0, totalMatchdaysForSeason - matchdayNumber),
+      isEndOfSeason: season?.is_finished === true,
+    })
+  }, [ready, standingsAfter, managers, totalMatchdaysForSeason, matchdayNumber, season?.is_finished])
 
   if (!league || !season) {
     return (
@@ -301,6 +305,8 @@ export function DashboardClient({ data }: DashboardClientProps) {
               dek={heroDek}
               synthesisParagraphs={synthesisParagraphs}
               bonusHighlight={bonusHighlight}
+              dangerZone={dangerZone}
+              promotionZone={promotionZone}
               matchesForMatchday={matchesForScoresDialog}
               managers={managers}
               standingsAfterMatchday={standingsForScoresDialog}

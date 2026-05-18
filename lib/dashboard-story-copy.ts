@@ -149,22 +149,16 @@ export function buildEditorialHeadlineSegments(params: {
 export function buildDashboardSynthesisParagraphs(params: {
   managers: ManagerWithTeam[]
   standingsHistory: StandingsHistoryWithManager[]
-  validatedRows: ValidatedMatchRow[]
   matchdayNumber: number
   leaderStrip: LeagueStoryKpi
   formBest: LeagueStoryKpi
-  formWorst: LeagueStoryKpi
-  matchOfRound: LeagueStoryKpi
-}): [StoryTextSegment[], StoryTextSegment[], StoryTextSegment[]] {
+}): [StoryTextSegment[], StoryTextSegment[]] {
   const {
     managers,
     standingsHistory,
-    validatedRows,
     matchdayNumber,
     leaderStrip,
     formBest,
-    formWorst,
-    matchOfRound,
   } = params
 
   const rows = standingsHistory.filter((r) => r.matchday_number === matchdayNumber)
@@ -213,26 +207,5 @@ export function buildDashboardSynthesisParagraphs(params: {
     })
   }
 
-  const dayMatches = validatedRows.filter((r) => r.matchday_number === matchdayNumber)
-  const p3: StoryTextSegment[] = []
-  if (matchOfRound.hasData && dayMatches.length > 0) {
-    const label = matchOfRound.managerName
-    p3.push(
-      { text: "Le match qui a fait du bruit : " },
-      { text: label, emphasize: true },
-      { text: `. ${matchOfRound.detail}` }
-    )
-  } else if (formWorst.hasData) {
-    p3.push(
-      { text: "Du côté des zones d’ombre, " },
-      { text: formWorst.teamLabel, emphasize: true },
-      { text: ` peine à retrouver des couleurs. ${formWorst.detail}` }
-    )
-  } else {
-    p3.push({
-      text: "La suite du feuilleton : suspens, chambrage sur le groupe WhatsApp, et prochaine journée déjà dans toutes les têtes.",
-    })
-  }
-
-  return [p1, p2, p3]
+  return [p1, p2]
 }

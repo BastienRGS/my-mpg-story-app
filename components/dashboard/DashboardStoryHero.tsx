@@ -4,6 +4,7 @@ import type {
   MatchdayScoresRow,
   StandingsHistoryWithManager,
 } from "@/lib/types"
+import type { DangerZoneBlock, PromotionZoneBlock } from "@/lib/matchday-narrative"
 import type { StoryTextSegment } from "@/lib/dashboard-story-copy"
 import { DashboardSynthesisInner } from "@/components/dashboard/DashboardStorySynthesis"
 import { MatchdayResultsDialogTrigger } from "@/components/sections/MatchdayNarrative"
@@ -16,8 +17,10 @@ type Props = {
   seasonName: string
   headlineSegments: StoryTextSegment[]
   dek: string
-  synthesisParagraphs: [StoryTextSegment[], StoryTextSegment[], StoryTextSegment[]]
+  synthesisParagraphs: [StoryTextSegment[], StoryTextSegment[]]
   bonusHighlight: BonusHighlightBlock | null
+  dangerZone?: DangerZoneBlock
+  promotionZone?: PromotionZoneBlock
   matchesForMatchday?: MatchdayScoresRow[]
   managers?: ManagerWithTeam[]
   standingsAfterMatchday?: StandingsHistoryWithManager[]
@@ -31,6 +34,8 @@ export function DashboardStoryHero({
   dek,
   synthesisParagraphs,
   bonusHighlight,
+  dangerZone,
+  promotionZone,
   matchesForMatchday,
   managers,
   standingsAfterMatchday,
@@ -75,7 +80,7 @@ export function DashboardStoryHero({
           surface="hero"
         />
 
-        <DashboardSynthesisInner paragraphs={synthesisParagraphs} bonusHighlight={bonusHighlight} />
+        <DashboardSynthesisInner paragraphs={synthesisParagraphs} bonusHighlight={bonusHighlight} dangerZone={dangerZone} promotionZone={promotionZone} />
       </div>
     </section>
   )

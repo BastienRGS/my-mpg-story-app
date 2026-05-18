@@ -307,6 +307,52 @@ export function MatchdayResultsDialogTrigger({
   )
 }
 
+export function DangerZoneSection({ dangerZone }: { dangerZone: { title: string; text: string } }) {
+  return (
+    <>
+      <Separator />
+      <div
+        className="rounded-lg p-3"
+        style={{ background: "#2a0a0a", borderLeft: "3px solid #ff4444" }}
+      >
+        <h3
+          className="text-xs font-bold uppercase tracking-widest"
+          style={{ color: "#ff4444" }}
+        >
+          {dangerZone.title}
+        </h3>
+        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+          {dangerZone.text}
+        </p>
+      </div>
+      <Separator />
+    </>
+  )
+}
+
+export function PromotionZoneSection({ promotionZone }: { promotionZone: { title: string; text: string } }) {
+  return (
+    <>
+      <Separator />
+      <div
+        className="rounded-lg p-3"
+        style={{ background: "#0d2b1a", borderLeft: "3px solid #3ddc84" }}
+      >
+        <h3
+          className="text-xs font-bold uppercase tracking-widest"
+          style={{ color: "#3ddc84" }}
+        >
+          {promotionZone.title}
+        </h3>
+        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+          {promotionZone.text}
+        </p>
+      </div>
+      <Separator />
+    </>
+  )
+}
+
 /**
  * Bloc narratif des bonus mis en avant (entre Héros du jour et Impact classement sur le dashboard).
  * Sur la page épisode (`newspaper`), peut afficher le bouton résultats en bas du bloc.
