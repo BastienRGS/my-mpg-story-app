@@ -411,7 +411,7 @@ const COACH_LORE_TAG: Partial<Record<TeamKey, string>> = {
   golden_roosters: "Le galactique",
   jakattak: "Fondateur en quête de trône",
   bab_olympique: "Légende déchue",
-  madeinviet: "Anomalie statistique",
+  madeinviet: "Anomalie statistique ?",
   deepblue: "Ça s'en va et ça revient...",
   celtic_gossbo: "Le survivant",
   omt: "Rebondisseur",
