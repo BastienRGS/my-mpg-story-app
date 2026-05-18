@@ -390,7 +390,7 @@ export function getLoreForMatch(homeTeam: string, awayTeam: string): string | nu
     return "Le premier roi contre le fondateur : Bab Olympique, légende déchue, défie celui qui a tout lancé."
   }
   if (ha && aw && hasKeys(ha, aw, "golden_roosters", "madeinviet")) {
-    return "La dynastie face à l'anomalie statistique : Madeinviet veut prouver que le titre de 2024 n’était pas un accident."
+    return "La dynastie face à Madeinviet qui veut prouver que le titre en S8 n’était pas un accident."
   }
   if (ha && aw && hasKeys(ha, aw, "golden_roosters", "mat_fc")) {
     return "Mat FC, dernier « autre » champion en date, tente de freiner la machine Golden Roosters."

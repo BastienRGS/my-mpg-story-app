@@ -60,7 +60,7 @@ export function getBonusNarrative(
         "Un petit coup de pouce numérique pour 3 points bien réels.\nOn n'appelle pas ça tricher,\non appelle ça un petit arrangement."
     } else if (o === "loss_or_draw") {
       raw =
-        "Même en hackant le game, ses chèvres ont trouvé\nle moyen de ne pas gagner.\nLe Cheat Code ne couvre pas la nullité !"
+        "Même en hackant le game, ses chèvres ont trouvé\nle moyen de ne pas gagner."
     }
   } else if (b === "4decat") {
     if (o === "win") {
