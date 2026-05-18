@@ -162,6 +162,23 @@ function rosterLeagueForContext(managers: ManagerWithTeam[]): "L1" | "L2" | null
   return null
 }
 
+export function getL2Standings(
+  standingsRows: StandingsHistoryWithManager[],
+  managers: ManagerWithTeam[]
+): ManagerWithTeam[] {
+  return standingsRows
+    .filter((r) => {
+      const mgr = managers.find((m) => m.id === r.manager_id)
+      if (!mgr) return false
+      const label = identityForRolando(mgr)
+      const { league, matchedRoster } = resolveSeason10RosterTeamDivision(label)
+      return matchedRoster && league === "L2"
+    })
+    .sort((a, b) => a.rank - b.rank)
+    .map((r) => managers.find((m) => m.id === r.manager_id))
+    .filter((m): m is ManagerWithTeam => m !== undefined)
+}
+
 export type BuildDynamicHeadlineParams = {
   matchdayNumber: number
   totalMatchdays: number
@@ -321,17 +338,148 @@ export function buildDynamicHeadline(params: BuildDynamicHeadlineParams): Dynami
       const m7 = r7 ? managers.find((m) => m.id === r7.manager_id) : undefined
       const m8 = r8 ? managers.find((m) => m.id === r8.manager_id) : undefined
       if (m7 && m8) {
+        const i7 = normalizeTeamName(identityForRolando(m7))
+        const i8 = normalizeTeamName(identityForRolando(m8))
+        const hasLoreTeam =
+          i7 === normalizeTeamName("Madinviet") ||
+          i7 === normalizeTeamName("Deepblue") ||
+          i8 === normalizeTeamName("Madinviet") ||
+          i8 === normalizeTeamName("Deepblue")
+        if (!hasLoreTeam) {
+          const t7 = displayTeamOrCoach(m7)
+          const t8 = displayTeamOrCoach(m8)
+          return {
+            headline: "La sentence est tombée. Deux équipes quittent l'élite.",
+            intro: capSentences(
+              `${t7} et ${t8} sont priés de quitter l'élite. Ils suivront la Ligue 1 depuis le canapé la saison prochaine.`,
+              3
+            ),
+          }
+        }
+      }
+    }
+
+    // END PRIORITY 5 — Champion L2
+    if (division === "L2") {
+      const r1l2 = rowsMd.find((r) => r.rank === 1)
+      const m1l2 = r1l2 ? managers.find((m) => m.id === r1l2.manager_id) : undefined
+      if (m1l2) {
+        const identity = identityForRolando(m1l2)
+        const team = displayTeamOrCoach(m1l2)
+        if (normalizeTeamName(identity) === normalizeTeamName("Bab Olympique")) {
+          return {
+            headline: "Bab Olympique est de retour. La légende reprend vie.",
+            intro: "Bab Olympique est de retour là où tout a commencé. Le premier champion de l'histoire retrouve l'élite. La légende peut reprendre vie.",
+          }
+        }
+        if (normalizeTeamName(identity) === normalizeTeamName("Madinviet")) {
+          return {
+            headline: "Madinviet repart de Ligue 2 par le haut. Encore.",
+            intro: "Madinviet repart de Ligue 2 comme il y était venu — par le haut. Le champion déchu veut reprouver que la S8 n'était pas un accident.",
+          }
+        }
+        return {
+          headline: `${team} remporte la Ligue 2. Direction l'élite.`,
+          intro: `${team} remporte la Ligue 2. Bravo ! Il va falloir confirmer en Ligue 1.`,
+        }
+      }
+    }
+
+    // END PRIORITY 6 — Promus L2 (fallback si rank 1 n'a pu être identifié par END 5)
+    if (division === "L2") {
+      const r1l2 = rowsMd.find((r) => r.rank === 1)
+      const r2l2 = rowsMd.find((r) => r.rank === 2)
+      const m1l2 = r1l2 ? managers.find((m) => m.id === r1l2.manager_id) : undefined
+      const m2l2 = r2l2 ? managers.find((m) => m.id === r2l2.manager_id) : undefined
+      if (m1l2 && m2l2) {
+        const t1 = displayTeamOrCoach(m1l2)
+        const t2 = displayTeamOrCoach(m2l2)
+        return {
+          headline: `${t1} et ${t2} quittent la L2 par la grande porte.`,
+          intro: `${t1} et ${t2} montent en Ligue 1. Bienvenue dans la cour des grands. Ça va piquer.`,
+        }
+      }
+    }
+
+    // END PRIORITY 7 — Relégués L1 génériques (avec lore spécifique Madinviet / Deepblue)
+    if (division === "L1" && nTeams >= 8) {
+      const r7 = rowsMd.find((r) => r.rank === 7)
+      const r8 = rowsMd.find((r) => r.rank === 8)
+      const m7 = r7 ? managers.find((m) => m.id === r7.manager_id) : undefined
+      const m8 = r8 ? managers.find((m) => m.id === r8.manager_id) : undefined
+      if (m7 && m8) {
+        const madinvietMgr = [m7, m8].find(
+          (m) => normalizeTeamName(identityForRolando(m)) === normalizeTeamName("Madinviet")
+        )
+        const deepblueMgr = [m7, m8].find(
+          (m) => normalizeTeamName(identityForRolando(m)) === normalizeTeamName("Deepblue")
+        )
+        const otherMgr = [m7, m8].find(
+          (m) =>
+            normalizeTeamName(identityForRolando(m)) !== normalizeTeamName("Madinviet") &&
+            normalizeTeamName(identityForRolando(m)) !== normalizeTeamName("Deepblue")
+        )
+        if (madinvietMgr && deepblueMgr) {
+          return {
+            headline: "Madinviet champion en S8, relégué à nouveau. Le yo-yo continue. Le vestiaire doit commencer à connaître le chemin.",
+            intro: capSentences(
+              "Madinviet champion en S8, relégué à nouveau. Le yo-yo continue. Deepblue repart en Ligue 2. Comme d'habitude. C'est presque une tradition à ce stade.",
+              4
+            ),
+          }
+        }
+        if (madinvietMgr) {
+          const otherSuffix = otherMgr ? ` ${displayTeamOrCoach(otherMgr)} descend aussi.` : ""
+          return {
+            headline: "Madinviet champion en S8, relégué à nouveau. Le yo-yo continue. Le vestiaire doit commencer à connaître le chemin.",
+            intro: capSentences(
+              `Madinviet champion en S8, relégué à nouveau. Le yo-yo continue. Le vestiaire doit commencer à connaître le chemin.${otherSuffix}`,
+              4
+            ),
+          }
+        }
+        if (deepblueMgr) {
+          const otherSuffix = otherMgr ? ` ${displayTeamOrCoach(otherMgr)} fait le même voyage.` : ""
+          return {
+            headline: "Deepblue repart en Ligue 2. Comme d'habitude. C'est presque une tradition à ce stade.",
+            intro: capSentences(
+              `Deepblue repart en Ligue 2. Comme d'habitude. C'est presque une tradition à ce stade.${otherSuffix}`,
+              4
+            ),
+          }
+        }
+        // Filet de sécurité générique (END 4 devrait avoir capturé ce cas)
         const t7 = displayTeamOrCoach(m7)
         const t8 = displayTeamOrCoach(m8)
         return {
-          headline: "La sentence est tombée. Deux équipes quittent l'élite.",
+          headline: `${t7} et ${t8} rendent leur tablier.`,
           intro: capSentences(
-            `${t7} et ${t8} sont priés de quitter l'élite. Ils suivront la Ligue 1 depuis le canapé la saison prochaine.`,
+            `${t7} et ${t8} quittent l'élite. La Ligue 1 ne pardonne pas. Rendez-vous en Ligue 2 pour une remise à niveau.`,
             3
           ),
         }
       }
     }
+
+    // END PRIORITY 8 — Barragiste raté (3e L2, non-Rolando)
+    if (division === "L2") {
+      const r3 = rowsMd.find((r) => r.rank === 3)
+      const m3 = r3 ? managers.find((m) => m.id === r3.manager_id) : undefined
+      if (m3 && !isRolandoTeam(identityForRolando(m3))) {
+        const team = displayTeamOrCoach(m3)
+        return {
+          headline: `${team} s'arrête aux portes de la montée.`,
+          intro: capSentences(
+            `${team} s'arrête aux portes de la montée. Si proche, si loin. La Ligue 2 pour une saison de plus.`,
+            3
+          ),
+        }
+      }
+    }
+
+    // END PRIORITY 9 — Famille Rolando divisée
+    // Nécessite les classements des deux ligues simultanément (un promu L2 + un relégué L1).
+    // Silently skipped : données cross-league non disponibles dans ce contexte.
 
     return fallbackEnd()
   }
