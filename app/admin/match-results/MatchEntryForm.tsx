@@ -15,7 +15,7 @@ import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { submitBulkMatchResults, type MatchEntryActionState } from "./actions"
+import { submitBulkMatchResults, getExistingMatchScoresAction, type MatchEntryActionState } from "./actions"
 
 export type LeagueOption = {
   slug: string
@@ -439,6 +439,44 @@ export function MatchEntryForm({ leagueOptions, leagueSlug }: MatchEntryFormProp
     homeBonusHighlights,
     awayBonusHighlights,
   ])
+
+  const prefetchedKeys = useRef<Set<string>>(new Set())
+  const lastSeasonId = useRef<string>("")
+  useEffect(() => {
+    if (seasonId !== lastSeasonId.current) {
+      prefetchedKeys.current.clear()
+      lastSeasonId.current = seasonId
+    }
+  }, [seasonId])
+  useEffect(() => {
+    const mdNum = parseInt(matchdayNumber, 10)
+    if (!seasonId || !Number.isInteger(mdNum) || mdNum < 1) return
+
+    for (let i = 0; i < homeSelections.length; i++) {
+      const homeId = homeSelections[i] ?? ""
+      const awayId = awaySelections[i] ?? ""
+      if (!homeId || !awayId) continue
+
+      const key = `${seasonId}:${mdNum}:${homeId}:${awayId}`
+      if (prefetchedKeys.current.has(key)) continue
+      prefetchedKeys.current.add(key)
+
+      const idx = i
+      getExistingMatchScoresAction(seasonId, mdNum, homeId, awayId).then((result) => {
+        if (!result) return
+        setHomeScores((prev) => {
+          const next = [...prev]
+          next[idx] = result.homeScore
+          return next
+        })
+        setAwayScores((prev) => {
+          const next = [...prev]
+          next[idx] = result.awayScore
+          return next
+        })
+      })
+    }
+  }, [seasonId, matchdayNumber, homeSelections, awaySelections])
 
   const successCleanupDone = useRef(false)
   useEffect(() => {

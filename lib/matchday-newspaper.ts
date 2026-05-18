@@ -222,7 +222,52 @@ export function buildDynamicHeadline(params: BuildDynamicHeadlineParams): Dynami
   })
 
   if (eos) {
-    // --- Fin de saison (priorités 1 → 4 comme cahier des charges) ---
+    // --- Fin de saison (priorités 0 → 4 comme cahier des charges) ---
+
+    // END PRIORITY 0 — Doublé Rolando (GR + Jakattak top 2 en L1)
+    if (division === "L1") {
+      const r1 = rowsMd.find((r) => r.rank === 1)
+      const r2 = rowsMd.find((r) => r.rank === 2)
+      const m1 = r1 ? managers.find((m) => m.id === r1.manager_id) : undefined
+      const m2 = r2 ? managers.find((m) => m.id === r2.manager_id) : undefined
+      if (
+        m1 && m2 &&
+        isRolandoTeam(identityForRolando(m1)) &&
+        isRolandoTeam(identityForRolando(m2))
+      ) {
+        const m1label = identityForRolando(m1)
+        const isGRFirst = normalizeTeamName(m1label) === normalizeTeamName("Golden Roosters")
+        const isJakFirst = normalizeTeamName(m1label) === normalizeTeamName("Jakattak")
+        if (isGRFirst) {
+          return {
+            headline: "Le doublé Rolando. La ligue leur appartient.",
+            intro: capSentences(
+              "Golden Roosters champion, Jakattak dauphin. Les frangins Rolando trustent le podium. Le fondateur s'incline devant son frère. Encore. La thérapie familiale attendra.",
+              5
+            ),
+          }
+        }
+        if (isJakFirst) {
+          return {
+            headline: "Le fondateur reprend son trône. Son frère dans son sillage.",
+            intro: capSentences(
+              "Le fondateur reprend son trône, son frère dans son sillage. Les Rolando font le doublé. La ligue n'appartient qu'à eux. Les autres ? Des figurants.",
+              4
+            ),
+          }
+        }
+        // Sub-case C — fallback si identification échoue
+        return {
+          headline: "Le doublé Rolando. Premier ET deuxième.",
+          intro: capSentences(
+            "Le doublé Rolando. Premier ET deuxième. La ligue leur appartient, les autres jouent pour la 3e place.",
+            3
+          ),
+        }
+      }
+    }
+
+    // END PRIORITY 1 — Un Rolando champion L1
     if (division === "L1") {
       const r1 = rowsMd.find((r) => r.rank === 1)
       const m1 = r1 ? managers.find((m) => m.id === r1.manager_id) : undefined

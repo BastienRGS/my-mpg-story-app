@@ -78,45 +78,28 @@ async function upsertMatch(
   home_score: number,
   away_score: number
 ): Promise<{ error: string } | { ok: true; matchId: string }> {
-  const { data: existing, error: findErr } = await supabase
+  const { data, error } = await supabase
     .from("matches")
-    .select("id")
-    .eq("matchday_id", matchdayId)
-    .eq("home_team_id", home_team_id)
-    .eq("away_team_id", away_team_id)
-    .maybeSingle()
-
-  if (findErr) {
-    return { error: findErr.message }
-  }
-
-  if (existing?.id) {
-    const { error: upErr } = await supabase
-      .from("matches")
-      .update({ home_score, away_score })
-      .eq("id", existing.id)
-    if (upErr) {
-      return { error: upErr.message }
-    }
-    return { ok: true, matchId: existing.id }
-  }
-
-  const { data: inserted, error: insErr } = await supabase
-    .from("matches")
-    .insert({
-      matchday_id: matchdayId,
-      home_team_id,
-      away_team_id,
-      home_score,
-      away_score,
-    })
+    .upsert(
+      {
+        matchday_id: matchdayId,
+        home_team_id,
+        away_team_id,
+        home_score,
+        away_score,
+      },
+      {
+        onConflict: "matchday_id,home_team_id,away_team_id",
+        ignoreDuplicates: false,
+      }
+    )
     .select("id")
     .single()
 
-  if (insErr || !inserted?.id) {
-    return { error: insErr?.message ?? "Création du match impossible." }
+  if (error || !data?.id) {
+    return { error: error?.message ?? "Enregistrement du match impossible." }
   }
-  return { ok: true, matchId: inserted.id }
+  return { ok: true, matchId: data.id }
 }
 
 const STANDARD_BONUS_OUTCOMES = new Set(["win", "loss_or_draw"])
@@ -445,12 +428,42 @@ export async function submitBulkMatchResults(
   revalidatePath(`/ligue/${leagueSlug}/j/${matchday_number}`)
   revalidatePath("/admin/match-results")
 
-  const n = toSave.length
-  const label = n === 1 ? "match enregistré" : "matchs enregistrés"
   return {
     ok: true,
-    message: `${n} ${label} avec succès.`,
+    message: "Résultats enregistrés (ajout ou mise à jour)",
     leagueSlug,
+  }
+}
+
+export async function getExistingMatchScoresAction(
+  seasonId: string,
+  matchdayNumber: number,
+  homeTeamId: string,
+  awayTeamId: string
+): Promise<{ homeScore: number; awayScore: number } | null> {
+  const supabase = createServiceRoleClient()
+  if (!supabase) return null
+
+  const { data: md } = await supabase
+    .from("matchdays")
+    .select("id")
+    .eq("season_id", seasonId)
+    .eq("number", matchdayNumber)
+    .maybeSingle()
+  if (!md?.id) return null
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select("home_score, away_score")
+    .eq("matchday_id", md.id)
+    .eq("home_team_id", homeTeamId)
+    .eq("away_team_id", awayTeamId)
+    .maybeSingle()
+  if (!match) return null
+
+  return {
+    homeScore: match.home_score ?? 0,
+    awayScore: match.away_score ?? 0,
   }
 }
 
