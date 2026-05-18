@@ -33,7 +33,7 @@ export default async function ManagersPage({ params }: PageProps) {
     notFound()
   }
 
-  const managers = await getManagersWithStats(season.id, league.id)
+  const managers = await getManagersWithStats(season.id, league.id, season)
   const total = managers.length
 
   return (

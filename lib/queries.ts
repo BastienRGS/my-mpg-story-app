@@ -188,13 +188,17 @@ type PalmarèsCounts = ManagerCard['palmares']
 /**
  * Lore nominative (carte managers) — comparaison sur `identity_label` normalisé.
  */
-function namedManagerLoreDescription(teamName: string): string | null {
+function namedManagerLoreDescription(teamName: string, palmares: PalmarèsCounts): string | null {
   const n = normalizeTeamName(teamName)
   if (n === normalizeTeamName('Jakattak')) {
     return 'Le Fondateur, exilé en L2 en S7, de retour pour récupérer son trône.'
   }
   if (n === normalizeTeamName('Golden Roosters')) {
-    return '5 titres, une domination sans partage. La dynastie Rolandesque plane encore sur chaque journée de championnat.'
+    const titles = palmares.l1Titles
+    if (titles >= 6) {
+      return `${titles} titres. La dynastie Rolandesque est immortelle. La ligue leur appartient.`
+    }
+    return `${titles} titres, une domination sans partage. La dynastie Rolandesque plane encore sur chaque journée de championnat.`
   }
   if (n === normalizeTeamName('Deepblue')) {
     return "Yo-yo perpétuel entre L1 et L2. La régularité n'est pas son fort."
@@ -218,7 +222,7 @@ function buildManagerLoreDescription(
   coachName: string,
   managerIndex: number
 ): string {
-  const named = namedManagerLoreDescription(teamName)
+  const named = namedManagerLoreDescription(teamName, palmares)
   if (named) return named
 
   const seasonsPlayed = getManagerSeasonCount(teamName, PALMARES)
@@ -279,14 +283,19 @@ function finalizeManagerCardLoreDescriptions(sortedCards: ManagerCard[]): Manage
 /**
  * Managers de la ligue avec stats **de la dernière journée déjà jouée** (dérivées des matchs
  * validés, comme le dashboard — cohérent avec `computeStandingsHistoryFromMatches`).
+ * Si `season.is_finished === true`, le palmarès est augmenté dynamiquement des résultats finaux
+ * de la saison courante (rang 1 L1 → +1 titre L1, bas du tableau L1 → +1 relégation, etc.).
  */
 export async function getManagersWithStats(
   seasonId: string,
-  leagueId: string
+  leagueId: string,
+  season?: Season | null
 ): Promise<ManagerCard[]> {
   const managers = await getManagers(leagueId, seasonId)
   const bundle = await getMatchResults(seasonId)
   const { rows: matchResults, error: loadError } = bundle
+
+  const recap = season?.is_finished === true ? await getSeasonRecap(seasonId) : null
 
   const lastByManager = new Map<string, StandingsHistoryWithManager>()
 
@@ -311,7 +320,15 @@ export async function getManagersWithStats(
     const loreTeamName =
       teamName.length > 0 ? teamName : (m.team?.name ?? '').trim()
     const row = lastByManager.get(m.id)
-    const palmares = getPalmarèsCountsForTeam(loreTeamName)
+    const palmares = { ...getPalmarèsCountsForTeam(loreTeamName) }
+
+    if (recap) {
+      if (recap.l1Champion?.id === m.id) palmares.l1Titles++
+      if (recap.l1Relegated.some((r) => r.id === m.id)) palmares.relegations++
+      if (recap.l2Champion?.id === m.id) palmares.l2Titles++
+      if (recap.l2Promoted.some((r) => r.id === m.id)) palmares.promotions++
+    }
+
     const { league: currentLeague, matchedRoster } = resolveSeason10RosterTeamDivision(loreTeamName)
     if (!matchedRoster) {
       console.warn(
@@ -357,7 +374,7 @@ export async function getAllManagersWithStats(): Promise<ManagerCard[]> {
       if (!league) return [] as ManagerCard[]
       const season = await getCurrentSeason(league.id)
       if (!season) return [] as ManagerCard[]
-      return getManagersWithStats(season.id, league.id)
+      return getManagersWithStats(season.id, league.id, season)
     })
   )
 
