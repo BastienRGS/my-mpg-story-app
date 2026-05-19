@@ -165,14 +165,12 @@ export function DashboardClient({ data }: DashboardClientProps) {
 
   const dangerZone = useMemo(() => {
     if (!ready) return null
-    console.log("dangerZone standings input:", standingsAfter?.length)
     const result = computeDangerZone({
       standingsRows: standingsAfter,
       managers,
       remainingMatchdays: Math.max(0, totalMatchdaysForSeason - matchdayNumber),
       isEndOfSeason: season?.is_finished === true,
     })
-    console.log("dangerZone result:", result)
     return result
   }, [ready, standingsAfter, managers, totalMatchdaysForSeason, matchdayNumber, season?.is_finished])
 

@@ -137,18 +137,7 @@ export function computeDangerZone(params: {
 }): DangerZoneBlock {
   const { standingsRows, managers, remainingMatchdays, isEndOfSeason } = params
 
-  console.log("dangerZone isEndOfSeason:", isEndOfSeason)
-
   const division = rosterDivisionForDanger(managers)
-  console.log("dangerZone division detected:", division)
-  console.log(
-    "dangerZone managers sample:",
-    managers.slice(0, 3).map((m) => ({
-      identity_label: m.identity_label,
-      team_name: m.team?.name,
-      name: m.name,
-    }))
-  )
   if (division !== "L1") return null
 
   const sorted = [...standingsRows].sort((a, b) => a.rank - b.rank)
@@ -170,28 +159,6 @@ export function computeDangerZone(params: {
   const mgrBot = managers.find((m) => m.id === rowBot.manager_id)
   const mgr2nd = managers.find((m) => m.id === row2nd.manager_id)
   const mgr3rd = managers.find((m) => m.id === row3rd.manager_id)
-
-  console.log("dangerZone bottom2:", {
-    bot: {
-      name: mgrBot ? teamDisplayName(mgrBot) : rowBot.manager_id,
-      pts: ptsBot,
-      lose_streak: rowBot.lose_streak,
-    },
-    sec: {
-      name: mgr2nd ? teamDisplayName(mgr2nd) : row2nd.manager_id,
-      pts: pts2nd,
-      lose_streak: row2nd.lose_streak,
-    },
-    third: { pts: pts3rd },
-  })
-  console.log("dangerZone conditions checked:", {
-    streakBot,
-    streak2nd,
-    pts3rdMinusPtsBot: pts3rd - ptsBot,
-    pts3rdMinusPts2nd: pts3rd - pts2nd,
-    conditionMet:
-      streakBot >= 2 || streak2nd >= 2 || pts3rd - ptsBot <= 3 || pts3rd - pts2nd <= 3,
-  })
 
   // Mid-season gate: skip if no team is close enough to the danger zone
   const conditionMet =
