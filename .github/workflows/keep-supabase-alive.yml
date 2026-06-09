@@ -14,8 +14,8 @@ jobs:
     steps:
       - name: Ping Supabase
         env:
-          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || vars.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           node - <<'NODE'
           const https = require("https");
@@ -23,10 +23,22 @@ jobs:
           const { SUPABASE_URL, SUPABASE_KEY } = process.env;
 
           if (!SUPABASE_URL || !SUPABASE_KEY) {
-            throw new Error("Missing Supabase GitHub Actions secrets.");
+            console.error("Missing Supabase GitHub Actions values.");
+            console.error("Add them as repository secrets or variables:");
+            console.error("- NEXT_PUBLIC_SUPABASE_URL");
+            console.error("- NEXT_PUBLIC_SUPABASE_ANON_KEY");
+            process.exit(1);
           }
 
-          const url = new URL("/rest/v1/leagues", SUPABASE_URL);
+          let url;
+          try {
+            url = new URL("/rest/v1/leagues", SUPABASE_URL);
+          } catch (error) {
+            console.error("Invalid NEXT_PUBLIC_SUPABASE_URL.");
+            console.error(error.message);
+            process.exit(1);
+          }
+
           url.searchParams.set("select", "id");
           url.searchParams.set("limit", "1");
 
@@ -42,11 +54,22 @@ jobs:
             (res) => {
               console.log("Status:", res.statusCode);
 
-              if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-                throw new Error(`Supabase ping failed with status ${res.statusCode}`);
-              }
+              let body = "";
+              res.setEncoding("utf8");
 
-              res.resume();
+              res.on("data", (chunk) => {
+                body += chunk;
+              });
+
+              res.on("end", () => {
+                if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+                  console.error("Supabase ping failed.");
+                  console.error("Response:", body.slice(0, 500) || "(empty)");
+                  process.exit(1);
+                }
+
+                console.log("Supabase ping succeeded.");
+              });
             },
           );
 
