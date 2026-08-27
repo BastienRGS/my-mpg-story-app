@@ -40,7 +40,10 @@ const NEWSPAPER_VARS: CSSProperties = {
   ["--color-muted" as string]: "#888888",
 } as const
 
-type PageProps = { params: Promise<{ slug: string; matchday: string }> }
+type PageProps = {
+  params: Promise<{ slug: string; matchday: string }>
+  searchParams?: Promise<{ season?: string }>
+}
 
 function labelManager(m: ManagerWithTeam): string {
   return m.team?.name || m.name
@@ -123,13 +126,17 @@ function MatchdayKpiBlock({ kpi }: { kpi: LeagueStoryKpi }) {
   )
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug, matchday: matchdayParam } = await params
+  const search = searchParams ? await searchParams : {}
+  const seasonId = typeof search.season === "string" && search.season.trim() !== ""
+    ? search.season.trim()
+    : null
   const n = parseInt(matchdayParam, 10)
   if (!Number.isFinite(n) || n < 1) {
     return { title: "Journée" }
   }
-  const data = await getMatchdayEpisodePageData(slug, n)
+  const data = await getMatchdayEpisodePageData(slug, n, { seasonId })
   if (!data) {
     return { title: "Journée introuvable" }
   }
@@ -140,14 +147,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default async function MatchdayEpisodePage({ params }: PageProps) {
+export default async function MatchdayEpisodePage({ params, searchParams }: PageProps) {
   const { slug, matchday: matchdayParam } = await params
+  const search = searchParams ? await searchParams : {}
+  const seasonId = typeof search.season === "string" && search.season.trim() !== ""
+    ? search.season.trim()
+    : null
   const matchdayNumber = parseInt(matchdayParam, 10)
   if (!Number.isFinite(matchdayNumber) || matchdayNumber < 1) {
     notFound()
   }
 
-  const data = await getMatchdayEpisodePageData(slug, matchdayNumber)
+  const data = await getMatchdayEpisodePageData(slug, matchdayNumber, { seasonId })
   if (!data) {
     notFound()
   }
@@ -156,7 +167,8 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
   const host = h.get("x-forwarded-host") ?? h.get("host")
   const proto = h.get("x-forwarded-proto") ?? "https"
   const siteBase = host ? `${proto}://${host}` : ""
-  const shareUrl = `${siteBase}/ligue/${encodeURIComponent(slug)}/j/${matchdayNumber}`
+  const seasonQuery = seasonId ? `?season=${encodeURIComponent(seasonId)}` : ""
+  const shareUrl = `${siteBase}/ligue/${encodeURIComponent(slug)}/j/${matchdayNumber}${seasonQuery}`
 
   const {
     league,
@@ -599,7 +611,7 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
               {episodePrevNum != null ? (
                 <Link
                   className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/15 bg-[#1a1a1a] px-3 text-center text-xs font-black uppercase tracking-wide text-white transition hover:border-[#3ddc84]/30 hover:text-[#3ddc84]"
-                  href={`/ligue/${encodeURIComponent(league.slug)}/j/${episodePrevNum}`}
+                  href={`/ligue/${encodeURIComponent(league.slug)}/j/${episodePrevNum}${seasonQuery}`}
                 >
                   ← Journée {episodePrevNum}
                 </Link>
@@ -614,7 +626,7 @@ export default async function MatchdayEpisodePage({ params }: PageProps) {
               {episodeNextNum != null ? (
                 <Link
                   className="flex min-h-12 w-full min-w-0 items-center justify-center break-words border border-white/15 bg-[#1a1a1a] px-3 text-center text-xs font-black uppercase tracking-wide text-white transition hover:border-[#3ddc84]/30 hover:text-[#3ddc84]"
-                  href={`/ligue/${encodeURIComponent(league.slug)}/j/${episodeNextNum}`}
+                  href={`/ligue/${encodeURIComponent(league.slug)}/j/${episodeNextNum}${seasonQuery}`}
                 >
                   Journée {episodeNextNum} →
                 </Link>

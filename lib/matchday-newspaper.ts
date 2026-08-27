@@ -87,7 +87,7 @@ export function seasonHeaderLabelFromSeasonName(seasonName: string, matchdayNumb
 
 // --- Titres dynamiques dashboard (contexte mi-saison vs fin de saison) ---
 
-export function getMatchWinner(match: Pick<MatchResult, "home_score" | "away_score">): "home" | "away" | "draw" {
+export function getMatchWinner(match: { home_score: number; away_score: number }): "home" | "away" | "draw" {
   if (match.home_score > match.away_score) return "home"
   if (match.home_score < match.away_score) return "away"
   return "draw"

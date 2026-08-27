@@ -39,7 +39,7 @@ export function HeroHeadline({
   const underPressure = lastPlaceStanding?.manager?.name || "À déterminer"
 
   const matchdayNumber = currentMatchday?.number || latestMatchday || 1
-  const totalMatchdays = season.total_matchdays ?? 12
+  const totalMatchdays = season.total_matchdays ?? null
   const mdStatus = currentMatchday?.status ?? null
 
   const headline =
@@ -70,7 +70,9 @@ export function HeroHeadline({
             <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
               <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
               J{matchdayNumber}
-              <span className="font-normal text-muted-foreground">/ {totalMatchdays}</span>
+              {totalMatchdays != null ? (
+                <span className="font-normal text-muted-foreground">/ {totalMatchdays}</span>
+              ) : null}
             </span>
             <span className="text-border">·</span>
             <span
@@ -108,7 +110,7 @@ export function HeroHeadline({
               <div className="min-w-0">
                 <p className="text-[10px] text-muted-foreground sm:text-xs">Calendrier</p>
                 <p className="truncate text-sm font-bold text-foreground sm:text-base">
-                  J{matchdayNumber}/{totalMatchdays}
+                  {totalMatchdays != null ? `J${matchdayNumber}/${totalMatchdays}` : `J${matchdayNumber}`}
                 </p>
               </div>
             </div>

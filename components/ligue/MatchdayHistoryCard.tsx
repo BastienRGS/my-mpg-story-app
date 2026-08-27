@@ -23,6 +23,7 @@ import {
 
 export type MatchdayHistoryCardProps = {
   leagueSlug: string
+  seasonId?: string | null
   matchdayNumber: number
   displayTitle: string
   dateLabel: string | null
@@ -47,6 +48,7 @@ export type MatchdayHistoryCardProps = {
 export function MatchdayHistoryCard(props: MatchdayHistoryCardProps) {
   const {
     leagueSlug,
+    seasonId,
     matchdayNumber,
     displayTitle,
     dateLabel,
@@ -58,7 +60,8 @@ export function MatchdayHistoryCard(props: MatchdayHistoryCardProps) {
   } = props
 
   const safeSlug = encodeURIComponent(leagueSlug)
-  const fullHref = `/ligue/${safeSlug}/j/${matchdayNumber}`
+  const seasonQuery = seasonId ? `?season=${encodeURIComponent(seasonId)}` : ""
+  const fullHref = `/ligue/${safeSlug}/j/${matchdayNumber}${seasonQuery}`
 
   return (
     <Card className="gap-0 py-4 shadow-sm">

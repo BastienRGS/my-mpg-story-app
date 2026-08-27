@@ -97,8 +97,12 @@ export async function resolveDashboardLeague(leagueSlug?: string | null): Promis
 
 const SEASON_SELECT = 'id, name, is_current, is_finished, league_id, total_matchdays'
 
-export function getTotalMatchdaysFromSeason(season: Season | null): number {
-  return season?.total_matchdays ?? 12
+export function getTotalMatchdaysFromSeason(season: Season | null): number | null {
+  return season?.total_matchdays ?? null
+}
+
+function hasCompleteScore(row: Pick<MatchResult, 'home_score' | 'away_score'>): boolean {
+  return row.home_score != null && row.away_score != null
 }
 
 export async function getCurrentSeason(leagueId: string): Promise<Season | null> {
@@ -132,6 +136,48 @@ export async function getCurrentSeason(leagueId: string): Promise<Season | null>
   }
 
   return fallback as Season | null
+}
+
+export async function getSeasonsForLeague(leagueId: string): Promise<Season[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('seasons')
+    .select(SEASON_SELECT)
+    .eq('league_id', leagueId)
+    .order('is_current', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching seasons for league:', error)
+    return []
+  }
+
+  return (data ?? []) as Season[]
+}
+
+export async function getSeasonByIdForLeague(
+  leagueId: string,
+  seasonId: string
+): Promise<Season | null> {
+  const sid = seasonId.trim()
+  if (!sid) return null
+
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('seasons')
+    .select(SEASON_SELECT)
+    .eq('league_id', leagueId)
+    .eq('id', sid)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching season by id for league:', error)
+    return null
+  }
+
+  return data as Season | null
 }
 
 export async function getManagers(leagueId: string, seasonId: string): Promise<ManagerWithTeam[]> {
@@ -431,8 +477,8 @@ export async function getMatchResults(seasonId: string): Promise<{
       matchday_number: typeof n === 'number' && Number.isFinite(n) ? n : 0,
       home_team_id: m.home_team_id,
       away_team_id: m.away_team_id,
-      home_score: Number(m.home_score),
-      away_score: Number(m.away_score),
+      home_score: m.home_score != null ? Number(m.home_score) : null,
+      away_score: m.away_score != null ? Number(m.away_score) : null,
       created_at: m.created_at ?? null,
     }
   })
@@ -735,12 +781,15 @@ export type MatchdayEpisodePageData = {
  */
 export async function getMatchdayEpisodePageData(
   leagueSlug: string,
-  matchdayNumber: number
+  matchdayNumber: number,
+  options: { seasonId?: string | null } = {}
 ): Promise<MatchdayEpisodePageData | null> {
   const league = await getLeagueBySlug(leagueSlug)
   if (!league) return null
 
-  const season = await getCurrentSeason(league.id)
+  const season = options.seasonId
+    ? await getSeasonByIdForLeague(league.id, options.seasonId)
+    : await getCurrentSeason(league.id)
   if (!season) return null
 
   const matchday = await getMatchdayBySeasonAndNumber(season.id, matchdayNumber)
@@ -865,7 +914,7 @@ function emptyDashboard(
     currentMatchday: null,
     matchdayPunchlineFromTable: null,
     bonusHighlight: null,
-    totalMatchdays: 12,
+    totalMatchdays: null,
     matchdayHighlightedBonuses: [],
     seasonRecap: null,
     ...overrides,
@@ -905,6 +954,7 @@ export async function getDashboardData(
   ])
 
   const { rows: matchResults, error: matchesLoadError } = matchBundle
+  const playedMatchResults = matchResults.filter(hasCompleteScore)
 
   let matchDataStatus: DashboardMatchDataStatus = 'empty'
   let matchDataIssues: string[] = []
@@ -920,10 +970,10 @@ export async function getDashboardData(
     matchDataIssues = [
       `Impossible de charger les résultats (tables « matchdays » / « matches »). Vérifiez le schéma, la migration SQL et les politiques RLS. Détail : ${matchesLoadError}`,
     ]
-  } else if (matchResults.length === 0) {
+  } else if (playedMatchResults.length === 0) {
     matchDataStatus = 'empty'
   } else {
-    const { issues, validRows } = validateSeasonMatchResults(managers, matchResults)
+    const { issues, validRows } = validateSeasonMatchResults(managers, playedMatchResults)
     if (issues.length > 0) {
       matchDataStatus = 'invalid'
       matchDataIssues = issues
@@ -951,7 +1001,7 @@ export async function getDashboardData(
   if (season && currentMatchday && currentMatchday.number >= 1) {
     matchdayPunchlineFromTable = await getPunchlineForSeasonMatchday(season.id, currentMatchday.number)
     const mdNum = currentMatchday.number
-    const idsThisMd = matchResults.filter((r) => r.matchday_number === mdNum).map((r) => r.id)
+    const idsThisMd = playedMatchResults.filter((r) => r.matchday_number === mdNum).map((r) => r.id)
     const bonusRows = await getHighlightedMatchBonusesForMatchIds(idsThisMd)
     matchdayHighlightedBonuses = bonusRows
     bonusHighlight = computeMatchdayBonusHighlight(bonusRows, managers)
@@ -978,7 +1028,7 @@ export async function getDashboardData(
     currentMatchday,
     matchdayPunchlineFromTable,
     bonusHighlight,
-    totalMatchdays: getTotalMatchdaysFromSeason(season),
+    totalMatchdays: season.total_matchdays ?? null,
     matchdayHighlightedBonuses,
     seasonRecap,
   }

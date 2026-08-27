@@ -3,15 +3,15 @@ import Link from "next/link"
 import type { Metadata } from "next"
 import { ChevronLeft } from "lucide-react"
 import {
-  getCurrentSeason,
   getLeagueBySlug,
   getManagers,
   getMatchdaysWithMatchesForSeason,
+  getSeasonsForLeague,
   type MatchdayWithMatches,
 } from "@/lib/queries"
 import { validateSeasonMatchResults } from "@/lib/match-results-validation"
 import { computeStandingsHistoryFromMatches } from "@/lib/compute-standings-from-matches"
-import type { ManagerWithTeam, Match, MatchResult } from "@/lib/types"
+import type { ManagerWithTeam, Match, MatchResult, Season } from "@/lib/types"
 import { MatchdayHistoryCard, type MatchdayHistoryCardProps } from "@/components/ligue/MatchdayHistoryCard"
 
 type PageProps = {
@@ -40,6 +40,13 @@ function formatMatchdayDate(md: MatchdayWithOptionalDate): string | null {
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(d)
 }
 
+function seasonArchiveLabel(season: Season): string {
+  const name = season.name.trim()
+  if (name === "2026") return "Saison 2025-2026 PART 2"
+  if (name.length > 0) return name.startsWith("Saison ") ? name : `Saison ${name}`
+  return "Saison archivée"
+}
+
 function matchResultsFromMatchdays(matchdays: MatchdayWithMatches[]): MatchResult[] {
   const out: MatchResult[] = []
   for (const md of matchdays) {
@@ -51,8 +58,8 @@ function matchResultsFromMatchdays(matchdays: MatchdayWithMatches[]): MatchResul
         matchday_number: n,
         home_team_id: m.home_team_id,
         away_team_id: m.away_team_id,
-        home_score: m.home_score != null ? Number(m.home_score) : (null as unknown as number),
-        away_score: m.away_score != null ? Number(m.away_score) : (null as unknown as number),
+        home_score: m.home_score != null ? Number(m.home_score) : null,
+        away_score: m.away_score != null ? Number(m.away_score) : null,
         created_at: m.created_at ?? null,
       } as MatchResult)
     }
@@ -81,6 +88,7 @@ function buildCardProps(
   md: MatchdayWithMatches,
   managers: ManagerWithTeam[],
   leagueSlug: string,
+  seasonId: string,
   standingsByMatchday: Map<number, MatchdayHistoryCardProps["standingsRows"]>,
   standingsAvailable: boolean,
   standingsUnavailableReason: string | null
@@ -90,6 +98,7 @@ function buildCardProps(
 
   return {
     leagueSlug,
+    seasonId,
     matchdayNumber: md.number,
     displayTitle: `Journée ${md.number}`,
     dateLabel: formatMatchdayDate(md as MatchdayWithOptionalDate),
@@ -106,32 +115,9 @@ function buildCardProps(
   }
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params
-  const league = await getLeagueBySlug(slug)
-  if (!league) {
-    return { title: "Historique" }
-  }
-  return {
-    title: `Historique des journées — ${league.name}`,
-    description: `Toutes les journées de ${league.name}, du plus récent au plus ancien.`,
-  }
-}
-
-export default async function LeagueHistoryPage({ params }: PageProps) {
-  const { slug } = await params
-  const league = await getLeagueBySlug(slug)
-  if (!league) {
-    notFound()
-  }
-
-  const season = await getCurrentSeason(league.id)
-  if (!season) {
-    notFound()
-  }
-
+async function buildSeasonHistorySection(leagueSlug: string, season: Season) {
   const [managers, bundle] = await Promise.all([
-    getManagers(league.id, season.id),
+    getManagers(season.league_id, season.id),
     getMatchdaysWithMatchesForSeason(season.id),
   ])
 
@@ -174,9 +160,49 @@ export default async function LeagueHistoryPage({ params }: PageProps) {
     }
   }
 
-  const cards: MatchdayHistoryCardProps[] = matchdays.map((md) =>
-    buildCardProps(md, managers, league.slug, standingsByMatchday, standingsAvailable, standingsUnavailableReason)
-  )
+  return {
+    season,
+    bundleError,
+    cards: matchdays.map((md) =>
+      buildCardProps(
+        md,
+        managers,
+        leagueSlug,
+        season.id,
+        standingsByMatchday,
+        standingsAvailable,
+        standingsUnavailableReason
+      )
+    ),
+  }
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params
+  const league = await getLeagueBySlug(slug)
+  if (!league) {
+    return { title: "Historique" }
+  }
+  return {
+    title: `Historique des journées — ${league.name}`,
+    description: `Toutes les journées de ${league.name}, du plus récent au plus ancien.`,
+  }
+}
+
+export default async function LeagueHistoryPage({ params }: PageProps) {
+  const { slug } = await params
+  const league = await getLeagueBySlug(slug)
+  if (!league) {
+    notFound()
+  }
+
+  const seasons = await getSeasonsForLeague(league.id)
+  if (seasons.length === 0) {
+    notFound()
+  }
+
+  const currentSeason = seasons.find((s) => s.is_current === true) ?? seasons[0]!
+  const sections = await Promise.all(seasons.map((season) => buildSeasonHistorySection(league.slug, season)))
 
   return (
     <div className="min-h-screen bg-background">
@@ -197,26 +223,47 @@ export default async function LeagueHistoryPage({ params }: PageProps) {
             Historique des journées
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
-            {league.name} · {season.name}
+            {league.name} · saison courante : {seasonArchiveLabel(currentSeason)}
           </p>
         </header>
 
-        {bundleError ? (
-          <p className="text-sm text-destructive" role="alert">
-            Impossible de charger les journées : {bundleError}
-          </p>
-        ) : cards.length === 0 ? (
+        {sections.every((section) => section.cards.length === 0 && !section.bundleError) ? (
           <p className="text-sm text-muted-foreground">
-            Aucune journée enregistrée pour cette saison dans Supabase.
+            Aucune journée enregistrée dans Supabase.
           </p>
         ) : (
-          <ul className="space-y-3" aria-label="Liste des journées">
-            {cards.map((c) => (
-              <li key={c.matchdayNumber}>
-                <MatchdayHistoryCard {...c} />
-              </li>
+          <div className="space-y-8">
+            {sections.map(({ season, bundleError, cards }) => (
+              <section key={season.id} className="space-y-3" aria-labelledby={`season-${season.id}`}>
+                <div className="border-b border-border/50 pb-2">
+                  <p className="section-label">
+                    {season.is_current ? "Saison en cours" : "Archive"}
+                  </p>
+                  <h2 id={`season-${season.id}`} className="text-xl font-semibold tracking-tight text-foreground">
+                    {seasonArchiveLabel(season)}
+                  </h2>
+                </div>
+
+                {bundleError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    Impossible de charger les journées : {bundleError}
+                  </p>
+                ) : cards.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Aucune journée enregistrée pour cette saison.
+                  </p>
+                ) : (
+                  <ul className="space-y-3" aria-label={`Liste des journées - ${seasonArchiveLabel(season)}`}>
+                    {cards.map((c) => (
+                      <li key={`${season.id}-${c.matchdayNumber}`}>
+                        <MatchdayHistoryCard {...c} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </div>

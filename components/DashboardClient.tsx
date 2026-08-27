@@ -7,6 +7,7 @@ import { SeasonBattle } from "@/components/sections/SeasonBattle"
 import { LeagueStoryKpiGrid } from "@/components/sections/LeagueStoryKpiGrid"
 import { DashboardStoryHero } from "@/components/dashboard/DashboardStoryHero"
 import { DashboardMatchOfWeek } from "@/components/dashboard/DashboardMatchOfWeek"
+import { SeasonLaunchHomepage } from "@/components/dashboard/SeasonLaunchHomepage"
 import Link from "next/link"
 import { DashboardPunchline } from "@/components/dashboard/DashboardPunchline"
 import { DashboardStandingsTable } from "@/components/dashboard/DashboardStandingsTable"
@@ -28,6 +29,7 @@ import {
   computeLeagueStoryKpis,
   pickMatchOfRoundRow,
 } from "@/lib/league-story-kpis"
+import { matchHasCompleteScore as hasPlayedScore } from "@/lib/season-launch-editorial"
 
 interface DashboardClientProps {
   data: DashboardData
@@ -56,9 +58,10 @@ export function DashboardClient({ data }: DashboardClientProps) {
   const lastMdFromStandings =
     standingsHistory.length > 0 ? Math.max(...standingsHistory.map((s) => s.matchday_number)) : null
   const matchdayNumber = currentMatchday?.number ?? lastMdFromStandings ?? 1
-  const totalMatchdaysForSeason = season?.total_matchdays ?? 12
+  const totalMatchdaysForSeason = season?.total_matchdays ?? null
 
   const ready = matchDataStatus === "ready"
+  const isPreseason = !matchResults.some(hasPlayedScore)
 
   const storyKpis = useMemo(
     () => computeLeagueStoryKpis(managers, standingsHistory, validatedMatchRows),
@@ -107,7 +110,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
     }
     const dyn = buildDynamicHeadline({
       matchdayNumber,
-      totalMatchdays: totalMatchdaysForSeason,
+      totalMatchdays: totalMatchdaysForSeason ?? matchdayNumber,
       seasonName: season?.name ?? "",
       season: season ?? null,
       managers,
@@ -164,7 +167,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
   )
 
   const dangerZone = useMemo(() => {
-    if (!ready) return null
+    if (!ready || totalMatchdaysForSeason == null) return null
     const result = computeDangerZone({
       standingsRows: standingsAfter,
       managers,
@@ -175,7 +178,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
   }, [ready, standingsAfter, managers, totalMatchdaysForSeason, matchdayNumber, season?.is_finished])
 
   const promotionZone = useMemo(() => {
-    if (!ready) return null
+    if (!ready || totalMatchdaysForSeason == null) return null
     return computePromotionZone({
       standingsRows: standingsAfter,
       managers,
@@ -253,7 +256,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
               </Alert>
             ) : null}
 
-            {matchDataStatus === "empty" ? (
+            {matchDataStatus === "empty" && !isPreseason ? (
               <Alert>
                 <Info className="h-4 w-4" aria-hidden />
                 <AlertTitle>Aucun résultat pour cette saison</AlertTitle>
@@ -285,70 +288,76 @@ export function DashboardClient({ data }: DashboardClientProps) {
               </Link>
             </div>
 
-            {/* Bilan fin de saison */}
-            {season.is_finished === true && seasonRecap && (
-              <SeasonRecapSection
-                season={season}
-                leagueSlug={league.slug}
-                recap={seasonRecap}
-              />
+            {isPreseason ? (
+              <SeasonLaunchHomepage data={data} />
+            ) : (
+              <>
+                {/* Bilan fin de saison */}
+                {season.is_finished === true && seasonRecap && (
+                  <SeasonRecapSection
+                    season={season}
+                    leagueSlug={league.slug}
+                    recap={seasonRecap}
+                  />
+                )}
+
+                {/* Hero unique : accroche + intro (dek) + sous-récits synthèse */}
+                <DashboardStoryHero
+                  matchdayNumber={matchdayNumber}
+                  leagueName={league.name}
+                  seasonName={season.name}
+                  headlineSegments={heroSegments}
+                  dek={heroDek}
+                  synthesisParagraphs={synthesisParagraphs}
+                  bonusHighlight={bonusHighlight}
+                  dangerZone={dangerZone}
+                  promotionZone={promotionZone}
+                  matchesForMatchday={matchesForScoresDialog}
+                  managers={managers}
+                  standingsAfterMatchday={standingsForScoresDialog}
+                />
+
+                {/* Contenu sous le hero */}
+                <div className="!mt-0 mb-0 box-content space-y-10 pt-4 sm:space-y-12">
+                  {/* Punchline */}
+                  <DashboardPunchline punchline={matchdayPunchlineFromTable} />
+
+                  {/* 4. Le choc */}
+                  <DashboardMatchOfWeek
+                    managers={managers}
+                    matchdayNumber={matchdayNumber}
+                    row={motwRow}
+                    sectionHeading="Le choc"
+                  />
+
+                  {/* 5. Grands récits */}
+                  <LeagueStoryKpiGrid
+                    kpis={storyKpis}
+                    sectionTitle="Les grands récits"
+                    sectionDescription="Sept angles calculés sur le classement et les derniers scores — lecture express."
+                    compact
+                  />
+
+                  {/* 6. La bataille pour le titre */}
+                  <section className="mb-10 space-y-3" aria-labelledby="season-battle-heading">
+                    <h2
+                      id="season-battle-heading"
+                      className="px-0.5 text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                    >
+                      La bataille pour le titre
+                    </h2>
+                    <SeasonBattle leagueId={league.id} managers={managers} standingsHistory={standingsHistory} />
+                  </section>
+
+                  {/* 7. Classement */}
+                  <DashboardStandingsTable
+                    managers={managers}
+                    standingsAfterMatchday={standingsAfter}
+                    matchdayNumber={matchdayNumber}
+                  />
+                </div>
+              </>
             )}
-
-            {/* Hero unique : accroche + intro (dek) + sous-récits synthèse */}
-            <DashboardStoryHero
-              matchdayNumber={matchdayNumber}
-              leagueName={league.name}
-              seasonName={season.name}
-              headlineSegments={heroSegments}
-              dek={heroDek}
-              synthesisParagraphs={synthesisParagraphs}
-              bonusHighlight={bonusHighlight}
-              dangerZone={dangerZone}
-              promotionZone={promotionZone}
-              matchesForMatchday={matchesForScoresDialog}
-              managers={managers}
-              standingsAfterMatchday={standingsForScoresDialog}
-            />
-
-            {/* Contenu sous le hero */}
-            <div className="!mt-0 mb-0 box-content space-y-10 pt-4 sm:space-y-12">
-              {/* Punchline */}
-              <DashboardPunchline punchline={matchdayPunchlineFromTable} />
-
-              {/* 4. Le choc */}
-              <DashboardMatchOfWeek
-                managers={managers}
-                matchdayNumber={matchdayNumber}
-                row={motwRow}
-                sectionHeading="Le choc"
-              />
-
-              {/* 5. Grands récits */}
-              <LeagueStoryKpiGrid
-                kpis={storyKpis}
-                sectionTitle="Les grands récits"
-                sectionDescription="Sept angles calculés sur le classement et les derniers scores — lecture express."
-                compact
-              />
-
-              {/* 6. La bataille pour le titre */}
-              <section className="mb-10 space-y-3" aria-labelledby="season-battle-heading">
-                <h2
-                  id="season-battle-heading"
-                  className="px-0.5 text-lg font-bold tracking-tight text-foreground sm:text-xl"
-                >
-                  La bataille pour le titre
-                </h2>
-                <SeasonBattle leagueId={league.id} managers={managers} standingsHistory={standingsHistory} />
-              </section>
-
-              {/* 7. Classement */}
-              <DashboardStandingsTable
-                managers={managers}
-                standingsAfterMatchday={standingsAfter}
-                matchdayNumber={matchdayNumber}
-              />
-            </div>
 
             <div className="h-6 sm:h-8" />
           </div>

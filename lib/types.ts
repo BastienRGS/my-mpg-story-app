@@ -108,8 +108,8 @@ export interface MatchResult {
   matchday_number: number
   home_team_id: string
   away_team_id: string
-  home_score: number
-  away_score: number
+  home_score: number | null
+  away_score: number | null
   created_at: string | null
 }
 
@@ -239,7 +239,7 @@ export interface DashboardData {
   /** Bonus MPG saisi pour la journée courante (au plus un bloc narratif priorisé). */
   bonusHighlight: BonusHighlightBlock | null
   /** Nombre max de journées prévues (calendrier `matchdays`) pour fin de saison / titres dynamiques. */
-  totalMatchdays: number
+  totalMatchdays: number | null
   /**
    * Bonus `highlight = true` pour la journée courante (brut, avant agrégation narrative).
    * Même lot que celui passé à `computeMatchdayBonusHighlight`.
