@@ -76,13 +76,20 @@ export const PALMARES: PalmarèsEntry[] = [
     l2Winner: "Red Star",
     l2Promoted: ["Red Star", "OMT"],
   },
+  {
+    season: 10,
+    l1Winner: "Golden Roosters",
+    l1Relegated: ["Olympique 2 Marseille", "Celtic Gossbo"],
+    l2Winner: "JPP",
+    l2Promoted: ["JPP", "Filou FC"],
+  },
 ]
 
 /** Angles narratifs (référence documentaire ; injection via helpers). */
 export const RIVALRIES_AND_LORE = {
   MAFIA_ROLANDESE: {
     summary:
-      "Jakattak a fondé la ligue (toujours coach actif). Golden Roosters est Jakattak sont supsonnés d'influencer le jeu; appelé aussi la mafia rolandèse. Et comme par hasard ils sont souvent sur le podium de le ligue 1. Golden Roosters a gagné Cinq titres L1 (S3, S5, S6, S7, S9). Victoire de Golden Roosters : Réelle victoire ou manipulation de la mafia rolandèse ?; défaite : anomalie rare.",
+      "Jakattak a fondé la ligue (toujours coach actif). Golden Roosters est Jakattak sont supsonnés d'influencer le jeu; appelé aussi la mafia rolandèse. Et comme par hasard ils sont souvent sur le podium de le ligue 1. Golden Roosters a gagné six titres L1 (S3, S5, S6, S7, S9, S10). Victoire de Golden Roosters : Réelle victoire ou manipulation de la mafia rolandèse ?; défaite : anomalie rare.",
   },
   BAB_OLYMPIQUE_LEGEND: {
     summary:
@@ -94,7 +101,7 @@ export const RIVALRIES_AND_LORE = {
   },
   GOLDEN_ROOSTERS_DYNASTY: {
     summary:
-      "Cinq sacres L1, force dominante : chaque journée pose la question « qui arrête la dynastie ? ».",
+      "Six sacres L1, force dominante : chaque journée pose la question « qui arrête la dynastie ? ».",
   },
   YO_YO_CLUBS: {
     Deepblue: "S1 descente, remontée S6, S8 retour en bas — aujourd’hui en L2.",
@@ -130,7 +137,7 @@ export const RIVALRIES_AND_LORE = {
 /** Effectifs Saison 10 (L1 / L2) — source pour `resolveSeason10RosterTeamDivision` et pages managers. */
 export const CURRENT_SEASON_10_ROSTERS = RIVALRIES_AND_LORE.CURRENT_SEASON_10
 
-const GOLDEN_ROOSTERS_L1_TITLES = 5
+const GOLDEN_ROOSTERS_L1_TITLES = 6
 
 function stripDiacritics(s: string): string {
   return s.normalize("NFD").replace(/\p{M}/gu, "")
@@ -410,7 +417,7 @@ export function getLoreForMatch(homeTeam: string, awayTeam: string): string | nu
 const COACH_LORE_TAG: Partial<Record<TeamKey, string>> = {
   golden_roosters: "Le galactique",
   jakattak: "Fondateur en quête de trône",
-  bab_olympique: "Légende déchue",
+  bab_olympique: "À jamais le premier",
   madeinviet: "Anomalie statistique ?",
   deepblue: "Ça s'en va et ça revient...",
   celtic_gossbo: "Le survivant",

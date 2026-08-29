@@ -68,16 +68,16 @@ export const seasonLaunchEditorial: Record<string, SeasonLaunchEditorial> = {
     },
     stories: [
       {
-        category: "À SUIVRE",
-        title: "Bab peut-il encore retrouver l'élite ?",
-        text:
-          "Les saisons passent et la Ligue 1 reste hors de portée. L'entraîneur Bab peut-il encore espérer retrouver l'élite ?",
-      },
-      {
         category: "RIVALITÉ",
         title: "La revanche des recalés",
         text:
           "La Ligue 2 ouvre une nouvelle chasse : moins de lumière, autant d'ego, et la même obsession de remonter à l'étage supérieur.",
+      },
+      {
+        category: "À SUIVRE",
+        title: "Bab peut-il encore retrouver l'élite ?",
+        text:
+          "Les saisons passent et la Ligue 1 reste hors de portée. L'entraîneur Bab peut-il encore espérer retrouver l'élite ? #AJamaisLePremier",
       },
     ],
     movements: [
