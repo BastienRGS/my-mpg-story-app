@@ -40,13 +40,13 @@ export const seasonLaunchEditorial: Record<string, SeasonLaunchEditorial> = {
         category: "DYNASTIE",
         title: "La fin du règne ?",
         text:
-          "Les Rollando peuvent-ils encore dominer Jakattak cette saison, ou assiste-t-on au début de la fin de leur règne ?",
+          "Les Rolando peuvent-ils encore dominer Jakattak cette saison, ou assiste-t-on au début de la fin de leur règne ?",
       },
       {
         category: "RIVALITÉ",
         title: "Affaire de famille",
         text:
-          "Chez les Rollando, le championnat se joue aussi en famille. Cette saison devra encore déterminer lequel des frères prendra l'ascendant sur l'autre.",
+          "Chez les Rolando, le championnat se joue aussi en famille. Cette saison devra encore déterminer lequel des frères prendra l'ascendant sur l'autre.",
       },
     ],
     movements: [
