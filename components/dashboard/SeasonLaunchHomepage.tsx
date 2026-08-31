@@ -1,6 +1,7 @@
 "use client"
 
 import { ChevronsUp, Swords } from "lucide-react"
+import Link from "next/link"
 import type { ReactNode } from "react"
 import type { DashboardData, ManagerWithTeam, MatchResult } from "@/lib/types"
 import { getSeasonLaunchEditorial } from "@/lib/season-launch-editorial"
@@ -105,6 +106,14 @@ export function SeasonLaunchHomepage({ data }: Props) {
               <p className="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
                 {leadStory.text}
               </p>
+              {leadStory.href && leadStory.cta ? (
+                <Link
+                  href={leadStory.href}
+                  className="mt-5 inline-flex items-center border border-primary px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+                >
+                  {leadStory.cta}
+                </Link>
+              ) : null}
             </article>
           ) : null}
 
@@ -117,6 +126,14 @@ export function SeasonLaunchHomepage({ data }: Props) {
                     {story.title}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{story.text}</p>
+                  {story.href && story.cta ? (
+                    <Link
+                      href={story.href}
+                      className="mt-3 inline-flex items-center border border-primary px-3 py-1.5 font-mono text-[0.7rem] font-black uppercase tracking-[0.18em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+                    >
+                      {story.cta}
+                    </Link>
+                  ) : null}
                 </article>
               ))}
             </div>

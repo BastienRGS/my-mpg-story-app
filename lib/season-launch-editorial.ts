@@ -4,6 +4,8 @@ export type SeasonLaunchStory = {
   category: string
   title: string
   text: string
+  href?: string
+  cta?: string
 }
 
 export type SeasonLaunchMovement = {
@@ -37,10 +39,12 @@ export const seasonLaunchEditorial: Record<string, SeasonLaunchEditorial> = {
     },
     stories: [
       {
-        category: "DYNASTIE",
-        title: "La fin du règne ?",
+        category: "À LA UNE",
+        title: "Dans la tête du champion",
         text:
-          "Les Rolando peuvent-ils encore dominer Jakattak cette saison, ou assiste-t-on au début de la fin de leur règne ?",
+          "Six titres, quelques ennemis et aucune envie de faire profil bas. L'entraîneur Seb ouvre les portes de son règne à La Gazzatak.",
+        href: "/ligue/jakattak_ligue1/articles/dans-la-tete-du-champion",
+        cta: "LIRE L'INTERVIEW",
       },
       {
         category: "RIVALITÉ",
